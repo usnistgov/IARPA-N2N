@@ -1,0 +1,184 @@
+\section{Software and Documentation}
+\label{sec:software}
+
+The functions specified in this API shall be implemented exactly as
+defined in the \lib. The header file used in the test driver is
+provided on \theprojectwebsite and as part of the validation package.
+
+\subsection{Restrictions}
+\label{subsec:software-restrictions}
+Participants shall provide binary code in the form of a \lib only
+(i.e., no source code or headers). \Libs must be submitted in the form of a
+dynamic/shared library file (i.e., ``.so'' file). This library shall be known as
+the ``core'' library, and shall be named according to the guidelines in
+\Cref{subsec:software-naming}. Static libraries (i.e., ``.a'' files) are not
+allowed. Multiple shared libraries are permitted if technically required and are
+compatible with the validation package. Any required libraries that are not
+standard to \os or installed on the testing hardware must be built and submitted
+alongside the ``core'' library. All submitted \libs will be placed in a single
+directory, and this directory will be added to the runtime library search path
+list.
+
+Individual \libs provided must not include multiple modes of operation or
+algorithm variations. No switches or options will be tolerated within one
+library. Access to a configuration directory of configuration files is provided,
+and if necessary, such algorithm configuration changes would occur during the
+call to an appropriate \code{init} method.
+
+The \lib shall not make use of threading, forking, or any other multiprocessing
+techniques, \textit{except during calls to \code{finalizeEnrollment()} and
+\code{init} methods}. The \testdriver operates as a Message Passing Interface
+(MPI) job over multiple compute nodes, and then forks itself into many
+processes. In the test environment, there is no advantage to threading. It
+limits the usefulness of NIST's batch processing and makes it impossible to
+compare timing statistics across participants. During
+\code{finalizeEnrollment()} and \code{init} methods, up to $C-1$ threads may be
+used for threading. This value should be queried at runtime using
+\code{std::thread::hardware_concurrency}.
+
+The \lib shall remain stateless. It shall not acknowledge the existence of other
+processes running on the test hardware, such as through \code{semaphore}s or
+\code{pipe}s. It shall not acknowledge the existance of other machines on the
+network. It shall not write to arbitrary file system locations. The only file
+system writes should occur during calls to API methods requiring file system
+writes. It shall not attempt network requests.
+
+\subsection{External Dependencies}
+It is preferred that the API specified by this document be implemented in a
+single ``core'' library. Additional libraries may be submitted that support this
+``core'' library file (i.e., the ``core'' library file may have dependencies
+implemented in other libraries if a single library is not feasible).
+
+Use of compiler and architecture optimizations is allowed and strongly
+encouraged, but \libs must be able to run on the following processor types:
+\begin{itemize}
+	\item AMD Opteron 8376HE
+	\item Intel Xeon E5405, X5680, X5690, X7560
+	\item Intel Xeon E5-2680
+\end{itemize}
+
+\subsection{Naming}
+\label{subsec:software-naming}
+The ``core'' \lib submitted shall be named in a predefined format. The first
+part of the \lib's name shall be \code{libN2N_}. The second piece of the \lib's
+name shall be a case-sensitive unique identifier that has been provided to you
+by the test administrator, followed by an underscore. The final part of the
+\lib's name shall be a version number, followed by the file extension
+\code{.so}. Supplemental libraries may have any name, but the ``core'' library
+must be dependent on supplemental libraries in order to be linked correctly. The
+\textbf{only} library that will be explicitly linked to the \testdriver is the
+``core'' library, as demonstrated in \Cref{subsec:software-environment}.
+
+The identifier and version number provided in the file name must match the
+values output by \code{getIDs()}. The version number must be incremented with
+every subsequent submission. With this naming scheme, \textbf{every ``core''
+library received shall have a unique filename}. Incorrectly named or versioned
+\libs will be rejected.
+
+\textbf{Example}\\
+Company X requests to participant in this software evaluation by submitting
+their public signing and encryption key. The project sponsor replies with the
+identifier ``01F3'' for use in Company X's \implementation. Company X submits a
+\lib named \code{libN2N_01F3_1.so} with revision 1 of their algorithm. This
+library assigns \code{01F3} to the \code{identifier} out parameter and
+\code{1} to the \code{revision} out parameter of  \code{getIDs()}. It is
+determined that Company X's validation fails and the \lib is rejected. Company
+X submits revision 2 to correct the defects in 1. Company X updates the value
+of \code{revision} in their implementation of \code{getIDs()} to \code{2} and
+renames their library to \code{libN2N_01F3_2.so}.
+
+\subsection{Operating Environment}
+\label{subsec:software-environment}
+
+The \lib will be tested in non-interactive ``batch'' mode (i.e., without
+terminal support) in an isolated environment (i.e., no Internet or other network
+connectivity). Thus, the \lib shall not use any interactive functions, such as
+graphical user interface calls, or any other calls that require terminal
+interaction (e.g., writes to \code{stdout}).
+
+NIST will link the provided library files to a \cpp language test driver
+application using the compiler \code{g++} (version \code{4.8.5-4}, via
+\code{mpicxx}) under \textbf{\os}. For example:
+\begin{center}
+	\code{mpicxx -std=c++11 -o N2N N2N.cpp -Llib -lN2N_01FE_2}
+\end{center}
+
+Participants are required to provide their \libs in a format that is linkable
+using \code{g++} with the \testdriver. All compilation and testing will be
+performed on 64-bit hardware running \os. Participants are strongly encouraged
+to verify library-level compatibility with \code{g++} on \os \textbf{prior to}
+submitting their software to avoid unexpected problems.
+
+\subsection{Usage}
+\label{subsec:software-usage}
+
+The \lib shall be executable on any number of machines without requiring
+additional machine-specific license control procedures, activation, hardware
+dongles, or any other form of rights management.
+
+The \lib usage shall be \textbf{unlimited}. No usage controls or limits based
+on licenses, execution date/time, number of executions, etc., shall be enforced
+by the \lib.
+
+\subsection{Validation and Submitting}
+\label{subsec:software-validation}
+
+A \textit{validation package} that will link the participant's ``core''
+\lib to a sample \testdriver will be provided. Once the validation successfully
+completes on the participant's system, a file with validation data and the
+participant's \lib will be created. After being signed and encrypted,
+\textbf{only} this signed and encrypted file shall be submitted
+to \emailaddress. Any \lib submissions not generated by an unmodified copy of
+the \project validation package will be rejected. Any \lib submissions that
+generate errors while running the validation package on the test hardware will
+be rejected. Validation packages that have recorded errors while running on the
+participant's system will be rejected. Any \lib submissions not generated with
+the current version of the validation package will be rejected. Any submissions
+of successful validation runs not created on \os will be rejected.
+
+This validation step is crucial to determine that the \lib submitted by
+participants is operating correctly and as expected in different hardware
+environments. Any difference in candidate lists or similarity scores on the test
+hardware as compared to the participant's hardware, regardless of the number of
+nodes used during the first stage of identification, will not be tolerated.
+Differences in search and enrollment templates on the test hardware and
+participant hardware are permitted, but strongly discouraged.
+
+\subsection{Speed}
+\label{subsec:software-speed}
+
+Timing tests will be run and reported on a sample of the ``legacy'' dataset
+prior to completing the entire test. Submissions that do not meet the timing
+requirements on the dataset sample will be rejected. Participants may resubmit a
+faster submission immediately.
+
+\begin{table}
+	\centering
+	\rowcolors{2}{white}{gray!10}
+	\begin{tabular}{>{\centering}m{2.4in}>{\centering}m{1.1in}c}
+		\toprule
+		\rowcolor{white}
+		\textbf{Method} & \textbf{Maximum Time} &
+		    \textbf{Measurement} \\
+		\midrule
+		\code{getIDs()} & $0$ seconds & Exact \\
+		\code{initMakeEnrollmentTemplate()} & $5$ minutes & Exact \\
+		\code{makeEnrollmentTemplate()} & $3$ seconds & $90^{th}$
+		    percentile \\
+		\code{finalizeEnrollment()} & $90$ minutes per $1$ million
+		    subjects & Exact\\
+		\code{initMakeSearchTemplate()} & $5$ minutes & Exact \\
+		\code{makeSearchTemplate()} & $3$ seconds & $90^{th}$
+		    percentile \\
+		\code{initIdentificationStageOne()} & $5$ minutes & Exact \\
+		\code{initIdentificationStageTwo()} & $5$ minutes & Exact \\
+		\code{identifyTemplateStageOne()} $+$
+		    \code{identifyTemplateStageTwo()} & $1$ minute &
+		    $90^{th}$ percentile \\
+		\bottomrule
+	\end{tabular}
+	\captionsetup{font=footnotesize}
+	\caption{Speed requirements for API methods.}
+	\label{tbl:software-speed}
+\end{table}
+

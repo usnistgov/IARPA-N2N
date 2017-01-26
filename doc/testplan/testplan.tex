@@ -1,0 +1,59 @@
+\documentclass[11pt, oneside, table]{article}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{inconsolata}
+\usepackage[parfill]{parskip}
+\usepackage[underline=true,rounded corners=false]{pgf-umlsd}
+\usepackage{tikz}
+\usepackage{vmargin}
+\usepackage{xspace}
+
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\geometry{letterpaper}
+
+%%\setmargins{left}{top}{width}{height}{headht}{headsep}{footht}{footskip}
+\setmargins{0.55in}{0.2in}{7.4in}{9.1in}{0.3in}{0.2in}{0.6in}{0.5in}
+\renewcommand{\headwidth}{\linewidth}
+
+\usetikzlibrary{arrows}
+\usetikzlibrary{positioning}
+\usetikzlibrary{shadows}
+\usetikzlibrary{shapes}
+\usetikzlibrary{calc}
+\usetikzlibrary{backgrounds}
+
+\hypersetup{
+        pdftitle={Nail to Nail Fingerprint Capture Challenge},
+        pdfauthor={IARPA/NIST},
+        pdfborder={0 0 0},
+        pdfsubject={Software Test Plan},
+        linktoc=all,
+        linktocpage
+}
+
+\input{macros}
+
+\begin{document}
+
+	\input{title_page}
+
+	\pagestyle{fancy}
+	\input{introduction}
+	\input{fingerprint_data}
+	\input{image_data_interchange}
+	\input{testing_procedure}
+	\input{api}
+	\input{software}
+	\input{libbiomeval}
+
+	\input{disclaimer}
+	\input{revisions}
+
+\end{document}

@@ -1,0 +1,36 @@
+\section{Fingerprint Data}
+
+\subsection{New Imagery}
+All \scanners are required to save images in JPEG-2000 format. These images
+will be decompressed by \beframework and transmitted as defined in
+\Cref{sec:data-interchange}. The participant's \lib shall be able to create
+enrollment and search templates from the decompressed versions of the images
+created by their \scanner.
+
+Complete guidelines on the required image format are available on
+\theprojectwebsite.
+
+\subsection{Background Imagery}
+The \lib shall be required to handle creating enrollment and search templates
+from a large quantity of ``legacy'' operational rolled imagery. This imagery
+will be used to seed an enrollment set on which the \lib will search.
+
+This background imagery shall be provided to the \lib as uncompressed raw 8-bit
+grayscale, as transmitted according to \Cref{sec:data-interchange}. The images
+will be scanned at $500$ pixels per inch horizontal and vertical resolution.
+
+All data provided as background imagery will contain at most one finger.
+Fingerprint segmentation routines will not be required.
+
+\subsection{Proprietary Data}
+In addition to a JPEG-2000 image, participants have the option to save a
+``proprietary'' image or template directly from their \scanner. The time to
+create and save this data is included in the recorded physical data acquisition
+time for the \scanner, so it may be advisable to extract features using the
+API.  This data will be transmitted ``as-is'' to the \lib during enrollment and
+search template creation methods.
+
+There are rules and regulations for saving this data to ensure fairness, as
+defined on \theprojectwebsite. Not adhering these rules may result in
+rejecting the participant's \lib and/or disqualification from the \project. 
+

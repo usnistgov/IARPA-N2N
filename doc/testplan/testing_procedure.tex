@@ -1,0 +1,70 @@
+\section{Testing Procedure}
+\label{sec:procedure}
+
+Because of the live data collection portion of the \project, the advertised
+deadlines (\Cref{subsec:intro-timeline}) are very strict and cannot be
+extended. Failure to adhere to these deadlines may result in disqualification.
+
+\subsection{Validation}
+
+All participants submit their \lib via the project's validation mechanism. Any
+\lib submitted in a different manner will be asked to resubmit using the project
+validation mechanism.
+
+\subsection{Timing Test}
+Upon receiving a validated submission from a participant, a timing test will be
+run. This test will confirm whether or not the submission meets the timing
+thresholds defined in \Cref{subsec:software-speed}. If the submission is not
+fast enough and there is time prior to the final submission deadline,
+participants will be asked to speed up their algorithm and resubmit.
+
+Note that not all timing tests may be performed. For example, finalization of
+a multi-million subject enrolled set may not be feasible until after the submission
+deadline. Participants should ensure that all timing metrics are met prior to
+submission.
+
+\subsection{``Legacy'' Enrollment Template Generation}
+After timing has been confirmed, a large number of ``legacy'' rolled
+fingerprints will be provided to the enrollment template creation method
+(\Cref{subsec:api-enrollment_template}). This process is expected to be completed
+for all participants \textit{prior} to the live data collection.
+
+\subsection{Record Generation}
+Once the live data collection has completed, the test facility will collect the
+images and optional proprietary data from the participant's \scanners, along
+with the ``legacy'' rolled captures from ``Operator A'' and ``Operator B.'' All
+images will be encoded with subject information in an ANSI/NIST-ITL file.
+
+\subsection{N2N Enrollment Template Generation}
+The Operator B and participant \scanner images extracted from the ANSI/NIST-ITL
+files provided by the test facility will be passed to
+\code{makeEnrollmentTemplate()}.
+
+\subsection{Enrollment Set Finalization}
+At this point, all enrollment templates will have been created. Two enrollment
+sets will be formed by two separate calls to the enrollment set finalization
+method(\Cref{subsec:api-finalization}). One will be a combination of the
+``legacy'' and ``Operator B'' imagery, and the other a combination of the
+``legacy'' and participant \scanner imagery.
+
+\subsection{Search Template Creation}
+While simultaneously finishing enrollment template creation and enrollment set
+finalization, search template creation (\Cref{subsec:api-search_template}) will
+commence in order to create several search templates. It will be necessary to
+create search templates from ``Operator A'' and latent imagery.
+
+\subsection{Two-Stage Identification}
+After all enrollment sets have been finalized and all search templates have been
+created, the two-stage identification process will begin.
+
+\subsection{Analysis and Results Notification}
+Candidate lists and timing will be analyzed after the completion of the
+two-stage identification. The project sponsor will be notified of the results
+and will notify the recipients. Only the project sponsor will be able to release
+results.
+
+\subsection{Supplemental Report Generation}
+Data beyond which participant was the fastest or most accurate will be
+generated from running the software portion of this \project. Supplemental
+reports detailing this information may be released at the discretion of the
+project sponsor.

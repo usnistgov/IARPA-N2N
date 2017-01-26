@@ -1,0 +1,133 @@
+\section{Biometric Evaluation Framework}
+\label{sec:libbiomeval}
+
+Classes from NIST's \textit{Biometric Evaluation Framework} will be used when
+writing software to the \project API.  These classes are designed to be easy to
+learn and use. Methods and concepts that will be necessary during implementation
+are detailed in this section.
+
+Participants are free to use other parts of
+\textit{Biometric Evaluation Framework}
+in their implementations. There are two restrictions necessary to ensure that
+the \testdriver, which relies on \textit{Biometric Evaluation Framework},
+continues to work correctly. Participants shall not modify the source code of
+the library itself (though if you find a bug, please feel free to
+\href{https://github.com/usnistgov/BiometricEvaluation/issues}{submit an
+issue}). Participants shall also not import identical symbol definitions into
+their library. The \testdriver will be linked against \libbiomevalVersion, which
+will include all symbols necessary for participant \libs.
+
+\subsection{BiometricEvaluation::Finger}
+
+\large{\code{/usr/local/include/be_finger.h}}
+
+The \code{Finger} namespace contains enumerated constants that will be used to
+transmit information about the fingers represented in transmitted imagery.
+
+Notable enumerations include:
+\begin{itemize}
+	\item \code{Finger::Position}: Finger positions, such as
+	\code{RightThumb} and \code{LeftIndex}. The underlying numeric values
+	correspond to the finger position codes (FGP) from ANSI/NIST-ITL.
+
+	\item \code{Finger::Impression}: Impression type of the captured
+	fingerprint.
+		\begin{itemize}
+			\item \textbf{NOTE}: For this test, all N2N images will
+			be represented by \code{LiveScanRolled}. There will be
+			no differentiation between ``legacy'' rolled imagery
+			and the participant's \scanner imagery.
+			
+			\item \textbf{NOTE}: \implementations will be notified
+			during initialization whether to prepare for latent
+			imagery. It is expected that a different algorithm or
+			configuration within the core \lib will be needed when
+			processing latent imagery.
+		\end{itemize}
+\end{itemize}
+
+\subsection{BiometricEvaluation::Image}
+
+\large{\code{/usr/local/include/be_image.h}}\\
+\large{\code{/usr/local/include/be_image_image.h}}
+
+The \code{Image::Image} class encapsulates information about standardized images
+through classes defined in the \code{Image} namespace. Images provided to the
+\implementation will be decompressed and encapsulated into an \code{Image::Raw}.
+
+Notable methods include:
+\begin{itemize}
+	\item \code{getColorDepth()}: Obtain the number of bits per pixel.
+	\item \code{getBitDepth()}: Obtain the number of bits per channel.
+	\item \code{getResolution()}: Obtain the scanning resolution.
+		\begin{itemize}
+			\item The values are stored in \code{xRes} and
+			\code{yRes} of the resulting object.
+		\end{itemize}
+	\item \code{getDimensions()}: Obtain the image dimensions, in pixels.
+		\begin{itemize}
+			\item The values are stored in \code{xSize} and
+			\code{ySize} of the resulting object.
+		\end{itemize}
+	\item \code{getRawData()}: Obtain a buffer of decompressed raw bytes.
+	\begin{itemize}
+		\item \textbf{NOTE}: For \code{Image::Raw}, \code{getData()}
+		will return the same information as \code{getRawData()}.
+	\end{itemize}
+\end{itemize}
+
+\subsection{BiometricEvaluation::IO::RecordStore}
+
+\large{\code{/usr/local/include/be_io_recordstore.h}}
+
+When creating the finalized enrollment set (\Cref{subsec:api-finalization}),
+enrollment templates will be provided to the \implementation through an
+\code{IO::RecordStore}. These objects are key/data-pair storage abstractions
+that are designed for high-performance on the test hardware filesystems.
+
+Individual key/data-pair elements of an \code{RecordStore} are stored in an
+\code{IO::Record} struct, with \code{key} and \code{data} members.
+Dereferencing an \code{IO::RecordStores}'s iterator will provide an
+\code{IO::Record}.
+
+Notable methods include:
+\begin{itemize}
+	\item \code{getCount()}: Obtain the number of key/data pairs.
+	\item \code{sequence()}: Obtain the ``next'' key/data pair, until
+	exhausted.
+	\item \code{begin()/end()}: Iterate through all key/data pairs.
+\end{itemize}
+
+\subsection{BiometricEvaluation::Error::Exception}
+
+\large{\code{/usr/local/include/be_error_exception.h}}
+
+Should any truly exceptional conditions happen in your \implementation, throw
+an instance of an \code{Error::Exception}. An optional \code{std::string} can
+be included with additional information.
+
+\implementations should not throw an exception as a substitute for returning a
+failure condition. Exceptions should only be thrown in situations where a
+non-recoverable error has occurred.
+
+\subsection{BiometricEvaluation::Memory::uint8Array}
+
+\large{\code{/usr/local/include/be_memory_autoarray.h}}
+
+A \code{Memory::uint8Array} is a specialization of \code{Memory::AutoArray} for
+\code{uint8_t}. It is used in many places in the API and \code{Biometric
+Evaluation Framework} for managing dynamic memory buffers. It provides the
+convenience and C compatibility of a \code{uint8_t*} with the benefits of
+\code{std::vector<uint8_t>}.
+
+\code{uint8Array}s are \textit{implicitly} convertible to \code{uint8_t*} and
+can be used anywhere a \code{uint8_t*} is required, such as \code{std::memcpy}.
+
+Notable methods include:
+\begin{itemize}
+	\item \code{resize()}: Grow or shrink the array.
+	\item \code{size()}: Obtain the number of bytes in the array.
+	\item \code{operator[]}: Read or write directly from an offset without
+	bounds checking.
+	\item \code{begin()/end()}: Iterate through all elements.
+\end{itemize}

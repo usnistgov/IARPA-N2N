@@ -1,0 +1,508 @@
+\section{API Description}
+
+The \project software API is broken into three distinct parts:
+\begin{itemize}
+	\item Feature Extraction
+		\begin{itemize}
+			\item Enrollment Templates
+			\item Search Templates
+		\end{itemize}
+	\item Enrollment Set Generation
+	\item Identification
+		\begin{itemize}
+			\item Stage One (partial search)
+			\item Stage Two (complete search)
+		\end{itemize}
+\end{itemize}
+
+The process starts with creating many enrollment and search templates. Next, all
+enrollment templates are combined by the participant into a proprietary
+enrollment set, suitable for searching. Finally, search templates are searched
+against the enrollment set.
+
+It is expected that the total memory needed to store the entire enrollment set
+in Random Access Memory (RAM) will exceed the RAM capacity of a single test
+hardware node. For this reason, identification is broken into two stages.
+During creation of the enrollment set, the \implementation is provided the
+number of nodes that will be available during the first stage of
+identification. The \implementation should use this information to partition
+the enrollment set into that many parts.  Identification calls during the first
+stage will be provided a number, indicating the enrollment set partition in
+which to search. The \testdriver will ensure that each search template will be
+searched against all partitions. During \stagetwoidentification, all
+information generated from all the partition searches during
+\stageoneidentification will be provided to the \implementation simultaneously.
+This information should be processed and formed into a candidate list returned
+to the caller.
+
+\subsection{Enrollment Template Creation}
+\label{subsec:api-enrollment_template}
+
+The \lib will be responsible for creating several million enrollment templates.
+First, the \testdriver provides an opportunity for the \lib to load any
+configuration files and update the state of the implementation object returned.
+Next, the \testdriver \code{fork}s and repeatedly calls
+\code{makeEnrollmentTemplate()}. This method provides the \lib with a variable
+number of standard images or proprietary \scanner data, all from a single
+subject. The \lib should provide a single enrollment template representing the
+data of the passed-in subject.
+
+A Unified Modeling Language (UML) sequence diagram for this process is provided
+in \Cref{fig:api-enrollment_template}.
+
+\subsubsection{Failure to Extract}
+Failures to extract shall be reported by the \lib returning
+\code{ReturnStatus::FailedToExtract} and setting an appropriate value for the
+enrollment template (likely a 0-byte buffer). All enrollment templates,
+regardless of the value of \code{ReturnStatus}, will be provided to
+the enrollment set generation step described in \Cref{subsec:api-finalization}.
+
+\begin{figure}
+	\centering
+	\begin{sequencediagram}
+		\newthread{driver}{\TestDriver}
+		\newinst{driverchild}{\shortstack{\TestDriver\\Child}}
+		\newinst{logger}{Logger}
+		\newinst{datastore}{Storage}
+		\newinst{interface}{\code{N2N::Interface}}
+		\newinst{impl}{\shortstack{\code{N2N::Interface}\\
+		    Implementation}}
+
+		\begin{sdblock}{Enrollment Template Creation}{}
+			\begin{call}{driver}{\code{getImplementation()}}
+			    {interface}{\code{std::shared_ptr<N2N::Interface>}}
+
+				\begin{call}{interface}{new}{impl}{\code{this}}
+				\end{call}
+
+			\end{call}
+
+
+			\begin{call}{driver}{\code{getIDs()}}{impl}
+			    {E-mail, Revision, ID, \code{ReturnStatus}}
+			\end{call}
+
+			\begin{call}{driver}{E-mail, Revision, ID}{logger}{}
+			\end{call}
+
+			\begin{sdblock}{Initialization}
+			    {\textit{Participant multi-threading is permitted}}
+
+				\begin{call}{driver}
+				    {\code{initMakeEnrollmentTemplate(...)}}
+				    {impl}{\code{ReturnStatus}}
+				\end{call}
+
+				\begin{call}{driver}{\code{ReturnStatus}}
+				    {logger}{}
+				\end{call}
+			\end{sdblock}
+
+			\begin{call}{driver}{new}{driverchild}{exit}
+				\begin{sdblock}{Feature Extraction Loop}
+				    {\textit{$[1,n]$ processes, no
+				    participant multi-threading}}
+					\begin{call}{driverchild}
+					{\code{makeEnrollmentTemplate(...)}}
+					{impl}{\shortstack{Enrollment
+					Template\\\code{ReturnStatus}}}
+						\begin{callself}{impl}
+						    {\shortstack{Extract\\
+						    Features}}{}
+							\postlevel
+						\end{callself}
+					\end{call}
+
+					\begin{call}{driverchild}
+					    {Enrollment Template}{datastore}{}
+					\end{call}
+					\postlevel
+
+					\begin{call}{driverchild}
+					    {\shortstack{Duration\\
+					    \code{ReturnStatus}}}{logger}{}
+					\end{call}
+				\end{sdblock}
+			\end{call}
+
+
+		\end{sdblock}
+	\end{sequencediagram}
+
+	\captionsetup{font=footnotesize}
+	\caption{Enrollment Template Creation.}
+	\label{fig:api-enrollment_template}
+\end{figure}
+
+\subsection{Search Template Creation}
+\label{subsec:api-search_template}
+
+The process of creating search templates is identical to the creation of
+enrollment templates(\Cref{subsec:api-enrollment_template}). One significant
+change is that the \lib will be told during the initialization step whether or
+not latent imagery will be provided as sources for feature extraction. It is
+expected that participants will need to load a different algorithm or set of
+configuration files to process latent imagery. Only the type of imagery
+specified during initialization will be provided during the
+\code{N2N::Interface} implementation's lifetime.
+
+A UML sequence diagram for this process is provided in
+\Cref{fig:api-search_template}.
+
+\subsubsection{Failure to Extract}
+Failures to extract shall be reported by the \lib returning
+\code{ReturnStatus::FailedToExtract} and returning a 0-byte buffer for the
+search template. These search templates will not be passed to the two-stage
+identification methods.
+
+\begin{figure}
+	\centering
+	\begin{sequencediagram}
+		\newthread{driver}{\TestDriver}
+		\newinst{driverchild}{\shortstack{\TestDriver\\Child}}
+		\newinst{logger}{Logger}
+		\newinst{datastore}{Storage}
+		\newinst{interface}{\code{N2N::Interface}}
+		\newinst{impl}{\shortstack{\code{N2N::Interface}\\
+		    Implementation}}
+
+
+		\begin{sdblock}{Search Template Creation}{}
+			\begin{call}{driver}{\code{getImplementation()}}
+			    {interface}{\code{std::shared_ptr<N2N::Interface>}}
+				\begin{call}{interface}{new}{impl}{\code{this}}
+				\end{call}
+			\end{call}
+
+
+			\begin{call}{driver}{\code{getIDs()}}{impl}{E-mail,
+			    Revision, ID, \code{ReturnStatus}}
+			\end{call}
+
+			\begin{call}{driver}{E-mail, Revision, ID}{logger}{}
+			\end{call}
+
+			\begin{sdblock}{Initialization}{\textit{Participant
+			    multi-threading is permitted}}
+				\begin{call}{driver}
+				    {\code{initMakeSearchTemplate(...)}}{impl}
+				    {\code{ReturnStatus}}
+				\end{call}
+
+				\begin{call}{driver}{\code{ReturnStatus}}
+				    {logger}{}
+				\end{call}
+			\end{sdblock}
+
+			\begin{call}{driver}{new}{driverchild}{exit}
+				\begin{sdblock}{Feature Extraction Loop}
+				    {\textit{$[1,n]$ processes, no participant
+				    multi-threading}}
+					\begin{call}{driverchild}
+					    {\code{makeSearchTemplate(...)}}
+					    {impl}{\shortstack{Search
+					    Template\\\code{ReturnStatus}}}
+						\begin{callself}{impl}
+						    {\shortstack{Search\\
+						    Features}}{}\postlevel
+						\end{callself}
+					\end{call}
+
+					\begin{call}{driverchild}
+					    {Search Template}{datastore}{}
+					\end{call}
+
+					\postlevel
+
+					\begin{call}{driverchild}
+					    {\shortstack{Duration\\
+					    \code{ReturnStatus}}}{logger}{}
+					\end{call}
+				\end{sdblock}
+			\end{call}
+
+
+		\end{sdblock}
+	\end{sequencediagram}
+
+	\captionsetup{font=footnotesize}
+	\caption{Search Template Creation.}
+	\label{fig:api-search_template}
+\end{figure}
+
+\subsection{Enrollment Set Creation}
+\label{subsec:api-finalization}
+
+Once all enrollment templates have been created, the \testdriver will provide
+all enrollment templates to the \lib for processing into an enrollment set. The
+file format of the enrollment set is not specified, but please note that the
+file system running on the test hardware performs poorly with many small
+files. Some sort of ``database'' flat-file format (e.g., BerkeleyDB, SQLite,
+etc.) is recommended.
+
+The number of test hardware nodes used for \stageoneidentification
+will be provided to the \implementation during this process. If necessary for
+your implementation of identification, ensure that the enrollment set is
+partitioned into at least this many partitions.
+
+Participants must make a copy of all enrollment templates provided, as it will
+be their last opportunity to have access to the data in this form.
+
+A UML sequence diagram for this process is provided in
+\Cref{fig:api-finalization}.
+
+\begin{figure}
+	\centering
+	\begin{sequencediagram}
+		\newthread{driver}{\TestDriver}
+		\newinst{logger}{Logger}
+		\newinst{datastore}{Storage}
+		\newinst{interface}{\code{N2N::Interface}}
+		\newinst{impl}{\shortstack{\code{N2N::Interface}\\
+		    Implementation}}
+
+
+		\begin{sdblock}{Finalization of Enrollment Set}{}
+			\begin{call}{driver}{\code{getImplementation()}}
+			    {interface}{\code{std::shared_ptr<N2N::Interface>}}
+				\begin{call}{interface}{new}{impl}{\code{this}}
+				\end{call}
+			\end{call}
+
+			\begin{call}{driver}{\code{getIDs()}}{impl}{E-mail,
+			    Revision, ID, \code{ReturnStatus}}
+			\end{call}
+
+			\begin{call}{driver}{E-mail, Revision, ID}{logger}{}
+			\end{call}
+
+			\begin{sdblock}{Finalization}{\textit{Participant
+			    multi-threading is permitted}}
+				\begin{call}{driver}
+				    {\code{finalizeEnrollmentSet(...)}}{impl}
+				    {\code{ReturnStatus}}
+					\begin{call}{impl}{Read Templates}
+					    {datastore}{\shortstack{Enrollment\\
+					    Templates}}
+						\postlevel
+					\end{call}
+
+					\begin{callself}{impl}
+					    {\shortstack{Process\\Templates}}{}
+					\end{callself}
+
+					\begin{call}{impl}
+					    {Enrollment Set/Partitions}
+					    {datastore}{}
+					\end{call}
+				\end{call}
+
+				\begin{call}{driver}
+				    {\code{ReturnStatus}}{logger}{}
+				\end{call}
+			\end{sdblock}
+		\end{sdblock}
+	\end{sequencediagram}
+
+	\captionsetup{font=footnotesize}
+	\caption{Finalization of Enrollment Set.}
+	\label{fig:api-finalization}
+\end{figure}
+
+\subsection{Identification: Stage One}
+\label{subsec:api-identification_stage_one}
+
+A search template and enrollment set partition number are provided to the
+\implementation, which should search the enrollment set partition and record any
+necessary intermediate information. The path to a $4$ GB storage area will be
+provided in which this intermediate information should be written. The storage
+area will be a RAM disk, and will be shared by all $N$ a identification
+processes running on the same test hardware. In an effort to reduce disk I/O
+from identification timing, the \testdriver will be responsible for moving data
+from this RAM disk to permanent storage.
+
+A UML sequence diagram for this process is provided in
+\Cref{fig:api-identification_stage_one}.
+
+\subsubsection{Failure to Extract}
+If a search template failed to extract, it will not be passed to this method.
+
+\subsubsection{Failure to Search}
+If a failure occurs while searching during this stage, an appropriate error
+code should be returned. The \implementation is \textit{still} responsible for
+recording information about the search in the specified area for use in
+\stagetwoidentification, if desired. All Search IDs passed to 
+\stageoneidentification will be passed to \stagetwoidentification, regardless
+of failure. It is the \implementation's descision whether or not to return
+an empty candidate list from \stagetwoidentification as a result of a failure
+in \stageoneidentification. 
+
+\begin{figure}
+	\centering
+	\begin{sequencediagram}
+		\newthread{driver}{\TestDriver}
+		\newinst{driverchild}{\shortstack{\TestDriver\\Child}}
+		\newinst{logger}{Logger}
+		\newinst{datastore}{Storage}
+		\newinst{interface}{\code{N2N::Interface}}
+		\newinst{impl}{\shortstack{\code{N2N::Interface}\\
+		    Implementation}}
+
+		\begin{sdblock}{Identification: Stage One}{}
+			\begin{call}{driver}{\code{getImplementation()}}
+			    {interface}{\code{std::shared_ptr<N2N::Interface>}}
+				\begin{call}{interface}{new}{impl}
+				    {\code{this}}\end{call}
+			\end{call}
+
+			\begin{call}{driver}{\code{getIDs()}}{impl}{E-mail,
+			    Revision, ID, \code{ReturnStatus}}
+			\end{call}
+
+			\begin{call}{driver}{E-mail, Revision, ID}{logger}{}
+			\end{call}
+
+			\begin{sdblock}{Initialization}
+			    {\textit{Participant multi-threading is permitted}}
+				\begin{call}{driver}{\code{initIdentification%
+				    StageOne(nodeNumber, ...)}}{impl}
+				    {\code{ReturnStatus}}
+				\end{call}
+
+				\begin{call}{driver}{\code{ReturnStatus}}
+				    {logger}{}
+				\end{call}
+			\end{sdblock}
+
+			\begin{call}{driver}{new}{driverchild}{exit}
+				\begin{sdblock}{Identification Loop}
+				    {\textit{$[1,n]$ processes, no participant
+				    multi-threading}}
+					\begin{call}{driverchild}
+					    {\code{identifyTemplateStageOne(%
+					    ...)}}{impl}{\code{ReturnStatus}}
+						\postlevel
+
+						\begin{callself}{impl}
+						    {\shortstack{Search\\
+						    Enrollment\\Set\\Partition}}
+						    {}
+						    \postlevel
+						\end{callself}
+
+						\begin{call}{impl}
+						    {Identification Data}
+						    {datastore}{}
+						\end{call}
+					\end{call}
+
+					\postlevel
+					\begin{call}{driverchild}
+					    {\shortstack{Duration\\
+					    \code{ReturnStatus}}}{logger}{}
+					\end{call}
+				\end{sdblock}
+			\end{call}
+		\end{sdblock}
+	\end{sequencediagram}
+
+	\captionsetup{font=footnotesize}
+	\caption{Identification: Stage One.}
+	\label{fig:api-identification_stage_one}
+\end{figure}
+
+\subsection{Identification: Stage Two}
+\label{subsec:api-identitification_stage_two}
+
+After a search template has been searched against all enrollment set partitions
+in \stageoneidentification, the same search template will be provided to stage
+two of identification.  During this stage, the \testdriver will provide all
+information written during \stageoneidentification for this search template.
+The \implementation should coalesce this information and/or perform more
+searching over all partitions and return a candidate list.
+\stagetwoidentification will occur in a separate process with a separate
+instantiation of of the \implementation.
+
+A UML sequence diagram for this process is provided in
+\Cref{fig:api-identification_stage_two}.
+
+\subsubsection{Candidate List}
+A maximum of $100$ candidates may be returned. There is no minimum number of
+candidates. The number of candidates in the candidate list will be determined
+by calling the \code{size()} method of \code{vector}, and so all entries in the
+candidate list must be valid candidates (not ``placeholder'' objects).
+Candidates in the list must be sorted by descending similarity score, where
+\code{candidate.at(0)} has the highest probability of being a match.
+
+\subsubsection{Failure to Extract}
+If a search template failed to extract, it will not be passed to this method.
+The \testdriver will automatically record an empty candidate list.
+
+\begin{figure}
+	\centering
+	\begin{sequencediagram}
+		\newthread{driver}{\TestDriver}
+		\newinst{driverchild}{\shortstack{\TestDriver\\Child}}
+		\newinst{logger}{Logger}
+		\newinst{datastore}{Storage}
+		\newinst{interface}{\code{N2N::Interface}}
+		\newinst{impl}{\shortstack{\code{N2N::Interface}\\
+		    Implementation}}
+
+		\begin{sdblock}{Identification: Stage Two}{}
+			\begin{call}{driver}{\code{getImplementation()}}
+			    {interface}{\code{std::shared_ptr<N2N::Interface>}}
+				\begin{call}{interface}{new}{impl}
+				    {\code{this}}\end{call}
+			\end{call}
+
+
+			\begin{call}{driver}{\code{getIDs()}}{impl}{E-mail,
+			    Revision, ID, \code{ReturnStatus}}
+			\end{call}
+
+			\begin{call}{driver}{E-mail, Revision, ID}{logger}{}
+			\end{call}
+
+			\begin{sdblock}{Initialization}{\textit{Participant
+			    multi-threading is permitted}}
+				\begin{call}{driver}{\code{initIdentification%
+				    StageTwo(...)}}{impl}{\code{ReturnStatus}}
+				\end{call}
+
+				\begin{call}{driver}{\code{ReturnStatus}}
+				    {logger}{}
+				\end{call}
+			\end{sdblock}
+
+			\begin{call}{driver}{new}{driverchild}{exit}
+				\begin{sdblock}{Identification Loop}%
+				    {\textit{$[1,n]$ processes, no participant
+				    multi-threading}}
+					\begin{call}{driverchild}
+					    {\code{identifyTemplateStageTwo(%
+					    ...)}}{impl}{\shortstack{Candidate
+					    List\\\code{ReturnStatus}}}
+					    	\postlevel
+						\begin{callself}{impl}
+						{\shortstack{Search\\
+						Enrollment\\Set}}{}
+						\postlevel
+						\end{callself}
+					\end{call}
+
+					\postlevel
+					\begin{call}{driverchild}
+					    {\shortstack{Duration\\
+					    \code{ReturnStatus}}}{logger}{}
+					\end{call}
+				\end{sdblock}
+			\end{call}
+		\end{sdblock}
+	\end{sequencediagram}
+
+	\captionsetup{font=footnotesize}
+	\caption{Identification: Stage Two.}
+	\label{fig:api-identification_stage_two}
+\end{figure}
+

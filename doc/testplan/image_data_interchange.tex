@@ -1,0 +1,115 @@
+\section{Image Data Interchange}
+\label{sec:data-interchange}
+The \testdriver is responsible for decompressing all standard imagery and
+providing it to the \lib. This section defines the format in which images
+will be transmitted to the \lib. The \testdriver aims to transmit images
+in a standarized format to prevent participants from needing to implement new
+image-handling routines.
+
+\subsection{Scan Lines}
+Images shall follow the scan sequence as defined by ISO/IEC 19794-4:2005, \S6.2,
+and paraphrased here. \Cref{fig:data-scanlines} illustrates the recording order
+for the scanned image. The origin is the upper left corner of the image. The
+$X$-coordinate position (horizontal) shall increase positively from the origin
+to the right side of the image. The $Y$-coordinate position (vertical) shall
+increase positively from the origin to the bottom of the image.
+
+\begin{figure}
+	\centering
+	\fbox{%
+	\begin{tikzpicture}
+		\node[inner sep = 0] (fingerprintImage)
+		{\includegraphics[height=1.5in]{fingerprint}};
+
+		\node[rectangle] (line0)
+		    [right=0.5in of fingerprintImage.north east] {Line $0$};
+		\node[rectangle] (lineK)
+		    [right=0.5in of fingerprintImage] {Line $k$};
+		\node[rectangle] (lineN)
+		    [right=0.5in of fingerprintImage.south east] {Line $n$};
+
+		\node[minimum width=3in, minimum height = 0.25in, draw]
+		    (imageArray)
+		    [right=0.5in of lineK] {};
+		\node (line0Array)
+		    [right=0pt of imageArray.west] {Line $0$};
+		\node (lineKArray)
+		    [right=-4ex of imageArray.center] {Line $k$};
+		\node (lineNArray)
+		    [left=0pt of imageArray.east] {Line $n$};
+
+		\node (origin)
+		    [above=0pt of fingerprintImage.north west]
+		    {\footnotesize$(0,0)$};
+
+		\draw[->, very thick, orange]
+		    (fingerprintImage.north west) -- (line0.west);
+		\draw[->, very thick, blue]
+		    (fingerprintImage.west) -- (lineK.west);
+		\draw[->, very thick, red]
+		    (fingerprintImage.south west) -- (lineN.west);
+
+		\draw[->, very thick, orange] (line0.east) -|
+		    ([yshift=1pt]line0Array.north);
+		\draw[->, very thick, blue] (lineK.east) -- (4.75, 0) --
+		    (4.75, -1.25) -| ([yshift=-1pt]lineKArray.south);
+		\draw[->, very thick, red] (lineN.east) -|
+		    ([yshift=-1pt]lineNArray.south);
+	\end{tikzpicture}}
+
+	\captionsetup{font=footnotesize}
+	\caption{Order of scanned lines.}
+	\label{fig:data-scanlines}
+\end{figure}
+
+\subsection{Colors}
+Ensure that the appropriate values are passed to your \lib
+by ensuring the correct encoding of information in the JPEG-2000 header. A
+sample program, \href{https://github.com/usnistgov/IARPA-N2N/blob/master/src/utilities/beImageInfo.cpp}{beImageInfo.cpp},
+can be used to mimic the decompression
+of images that \beframework will perform.
+
+\subsubsection{Colorspace/Number of Channels}
+RGBA (four channels), RGB (three channels), and Grayscale (one channel)
+colorspaces are permitted for \libs. When using the RGB colorspace, pixels will
+be passed with the red channel first, followed by the green channel, and then
+the blue channel.  If an alpha channel is provided, it will immediately follow
+the blue channel. All channels will have the same numbers of bits when
+decompressed.
+
+The number of bits per pixel of the image can be determined by dividing the
+result of an \code{Image} instance's \code{getColorDepth()} method by the result of
+\code{getBitDepth()}.
+
+\subsection{Channel Depth}
+The number of bits per channel of the image can be determined by calling the
+\code{getBitDepth()} method on the \code{Image} instance. The API does not
+support channel bit depths other than $8$ or $16$. If the provided \scanner
+creates images in a lower bit depth, it should pad the channel values to fit
+within 8 or 16 bits. Bit depths larger than 16 are not supported.
+
+\subsubsection{8-bit}
+The minimum value that will be assigned to a ``black'' pixel is \code{0x00}. The
+maximum value that will be assigned to a ``white'' pixel is \code{0xFF}.
+Intermediate gray levels will have assigned values of \code{0x01}--\code{0xFE}.
+The pixels are stored left to right, top to bottom, with one 8-bit byte per
+pixel.
+
+The number of bytes in an image is equal to its height multiplied by its width
+as measured in pixels. The image height and width in pixels will be supplied to
+the software library as supplemental information.
+
+\subsubsection{16-bit}
+The minimum value that will be assigned to a ``black'' pixel is \code{0x00 00}.
+The maximum value that will be assigned to a ``white'' pixel is \code{0xFF FF}.
+Intermediate gray levels will have assigned values of \code{0x00 01}--\code{0xFF
+FE}. The pixels are stored left to right, top to bottom, with two 8-bit bytes
+per pixel. Data will be provided in little-endian format, where the most
+significant bit of the channel's value will be at the 9th of 16 bits. For
+example, the intermediate value $4\,660$ (\code{0x12 34}) would be transmitted
+as \code{0b0011 0100 0001 0010}.
+
+The number of bytes in an image is equal to its height multiplied by its width
+as measured in pixels, multiplied by two. The image height and width in pixels
+will be supplied to the software library as supplemental information.
+

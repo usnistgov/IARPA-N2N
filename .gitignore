@@ -1,0 +1,11 @@
+doc/build
+*.dylib
+*.so
+*.o
+src/utilities/beImageInfo/beImageInfo
+*.aux
+*.fls
+*.log
+*.out
+*.toc
+*.fdb_latexmk

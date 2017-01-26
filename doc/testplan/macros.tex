@@ -1,0 +1,54 @@
+\usepackage{listings}
+\lstset{language=C++,
+        basicstyle=\scriptsize\ttfamily,
+        keywordstyle=,
+        stringstyle=,
+        xleftmargin=1em,
+        xrightmargin=1em,
+        showstringspaces=false,
+        commentstyle=\itshape\rmfamily,
+        columns=flexible,
+        keepspaces=true,
+        frame=single,
+        texcl=true}
+
+\usepackage{color}
+\definecolor{lightgray}{gray}{0.9}
+\newcommand{\code}[1]{\setlength{\fboxsep}{0pt}\colorbox{lightgray}{\lstinline[basicstyle=\ttfamily\color{black}]|#1|\xspace}}
+
+\usepackage{relsize}
+\newcommand{\Rplus}{\protect\hspace{-.1em}\protect\raisebox{.35ex}{\smaller{\smaller\textbf{+}}}}
+\newcommand{\cpp}{\mbox{C\Rplus\Rplus}\xspace}
+
+% \IFDRAFTMODE macro
+\usepackage{ifdraft}
+\ifdraft{\let\IFDRAFTMODE\iftrue}{\let\IFDRAFTMODE\iffalse}
+
+\IFDRAFTMODE
+\usepackage[left]{lineno}
+\usepackage[printwatermark]{xwatermark}
+\newwatermark[color=red!20,angle=45,scale=3,ypos=0,allpages]{DRAFT}
+\linenumbers
+\fi
+
+\usepackage{xcolor}
+\newcommand{\highlight}[1]{\setlength{\fboxsep}{0pt}\colorbox{yellow!25}{#1\xspace}}
+\newcommand{\todo}[1]{\IFDRAFTMODE\textcolor{red}{TODO: #1\xspace}\else\GenericWarning{}{WARNING: Draft text omitted (#1)}\fi}
+
+\newcommand{\lib}{software library\xspace}
+\newcommand{\libs}{software libraries\xspace}
+\newcommand{\Libs}{Software libraries\xspace}
+\newcommand{\implementation}{\code{N2N::Interface} implementation\xspace}
+\newcommand{\implementations}{\implementation{}s\xspace}
+\newcommand{\testdriver}{test driver\xspace}
+\newcommand{\TestDriver}{Test Driver\xspace}
+\newcommand{\beframework}{\textit{Biometric Evaluation Framework}\xspace}
+\newcommand{\scanner}{N2N fingerprint imaging device\xspace}
+\newcommand{\scanners}{\scanner{}s\xspace}
+\newcommand{\theprojectwebsite}{\href{https://www.iarpa.gov/challenges/n2n/n2n.html}{the project website}\xspace}
+\newcommand{\emailaddress}{\href{mailto:N2NChallenge@nist.gov}{N2NChallenge@nist.gov}}
+\newcommand{\project}{N2N Fingerprint Capture Challenge\xspace}
+\newcommand{\os}{CentOS 7.2.1511\xspace}
+\newcommand{\stageoneidentification}{\textit{Identification: Stage One}\xspace}
+\newcommand{\stagetwoidentification}{\textit{Identification: Stage Two}\xspace}
+\newcommand{\libbiomevalVersion}{\code{libbiomeval.so.9.0}\xspace}
