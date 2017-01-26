@@ -6,7 +6,7 @@
  * Activity's (IARPA) [2017 Nail to Nail Fingerprint Capture Challenge]
  * (https://www.iarpa.gov/challenges/n2n/n2n.html).  This API is based off the
  * API used for [Fingerprint Vendor Technology Evaluation (FpVTE)
- * 2012](https://www.nist.gov/itl/iad/image-group/ fpvte-2012), by the
+ * 2012](https://www.nist.gov/itl/iad/image-group/fpvte-2012), by the
  * [National Institute of Standards and Technology (NIST)]
  * (https://www.nist.gov/itl/iad/image-group), released in the public domain.
  *
