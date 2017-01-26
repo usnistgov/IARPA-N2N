@@ -26,7 +26,7 @@ Documentation of the classes and methods that comprise the API are available
 within the [API header file]
 (https://github.com/usnistgov/IARPA-N2N/blob/master/src/include/n2n.h),
 [on the web](https://pages.nist.gov/IARPA-N2N), and in a [stand-alone document]
-(https://github.com/usnistgov/IARPA-N2N/blob/master/doc/n2n_api.pdf).
+(https://github.com/usnistgov/IARPA-N2N/blob/master/doc/testplan/testplan.pdf).
 
 Implementing the API
 --------------------
