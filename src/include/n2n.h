@@ -416,7 +416,7 @@ namespace N2N
 		 *
 		 * @note
 		 * All implementations must be capable of performing searches
-		 * using <= 5 nodes. A larger value may be provided for speed,
+		 * using >= 5 nodes. A larger value may be provided for speed,
 		 * or a smaller value provided to conserve resources. If a
 		 * smaller value is not feasible,
 		 * StatusCode::InsufficientResources should
