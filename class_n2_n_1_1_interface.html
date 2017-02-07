@@ -237,7 +237,7 @@ Static Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section note"><dt>Note</dt><dd>All implementations must be capable of performing searches using &lt;= 5 nodes. A larger value may be provided for speed, or a smaller value provided to conserve resources. If a smaller value is not feasible, <a class="el" href="namespace_n2_n.html#ad34cdec6e1f4c1fce5dd34a24272678fa0d4df07c6e41de1bbb4a3779608e443b" title="There are not enough resources to complete the task. ">StatusCode::InsufficientResources</a> should be returned. Implementations that do not return successfully for values &gt;= 5 will be disqualified.</dd>
+<dl class="section note"><dt>Note</dt><dd>All implementations must be capable of performing searches using &gt;= 5 nodes. A larger value may be provided for speed, or a smaller value provided to conserve resources. If a smaller value is not feasible, <a class="el" href="namespace_n2_n.html#ad34cdec6e1f4c1fce5dd34a24272678fa0d4df07c6e41de1bbb4a3779608e443b" title="There are not enough resources to complete the task. ">StatusCode::InsufficientResources</a> should be returned. Implementations that do not return successfully for values &gt;= 5 will be disqualified.</dd>
 <dd>
 The file system does not perform well with the creation of millions of small files, so the application should consolidate templates into some sort of database file within <code>enrollmentDirectory</code>.</dd>
 <dd>
