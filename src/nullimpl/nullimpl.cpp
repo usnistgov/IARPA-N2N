@@ -95,10 +95,14 @@ N2N::NullImplementation::finalizeEnrollment(
 			    std::to_string(nodeCount),
 			    BE::IO::RecordStore::Kind::Default);
 
-			std::for_each(iter, std::next(iter, tmplPerNode),
-			    [&](const BE::IO::RecordStore::Record &r) {
-				rs->insert(r.key, r.data);
-			    });
+			for (uint64_t r{0}; r < tmplPerNode; ++r) {
+				try {
+					auto d = enrollmentTemplates.sequence();
+					rs->insert(d.key, d.data);
+				} catch (BE::Error::ObjectDoesNotExist) {
+					break;
+				}
+			}
 		} catch (BE::Error::Exception &e) {
 			return {StatusCode::Vendor, "Could not create "
 			    "enrollment set partition: " + e.whatString()};
