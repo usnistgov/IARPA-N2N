@@ -609,11 +609,20 @@ namespace N2N
 		 * identifyTemplateStageOne() takes 55 seconds for searchID XYZ
 		 * (InputType::Capture), identifyTemplateStageTwo() must
 		 * complete within 5 seconds for the same search ID.
+		 * `stageOneDataDir` will reside on a RAM disk to reduce the
+		 * effects of I/O operations on this time requirement.
 		 *
 		 * @attention
 		 * Multithreading and other multiprocessing techniques are
 		 * absolutely not permitted. The testing application will be
 		 * calling this method from multiple processes on the same node.
+		 *
+		 * @attention
+		 * Unique filenames are required for all data written to
+		 * `stageOneDataDirectory` for each `searchID`. This can be
+		 * accomplished by appending `nodeNumber` (from
+		 * initIdentificationStageOne()) to the filename of any
+		 * file written within `stageOneDataDirectory`.
 		 */
 		virtual ReturnStatus
 		identifyTemplateStageOne(

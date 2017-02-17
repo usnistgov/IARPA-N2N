@@ -312,14 +312,89 @@ A UML sequence diagram for this process is provided in
 \subsection{Identification: Stage One}
 \label{subsec:api-identification_stage_one}
 
-A search template and enrollment set partition number are provided to the
-\implementation, which should search the enrollment set partition and record any
-necessary intermediate information. The path to a $4$ GB storage area will be
-provided in which this intermediate information should be written. The storage
-area will be a RAM disk, and will be shared by all $N$ a identification
-processes running on the same test hardware. In an effort to reduce disk I/O
-from identification timing, the \testdriver will be responsible for moving data
-from this RAM disk to permanent storage.
+A search template, enrollment set partition number, and temporary storage area
+known as the \textit{stage one data directory} are provided to the
+\implementation. The \implementation should search the search template for
+candidates within the enrollment set partition indicated, and record any
+necessary intermediate information in the stage one data directory. The format
+and layout of such intermediate information is not mandated, however all
+searches running on a single node will have at most $4$ GB of storage space
+combined to store such information. The \testdriver will periodically move files
+from this $4$ GB shared storage area to a more permanent location, freeing up
+space. The stage one data directory will be a temporary location in a RAM disk
+to reduce the effects of I/O operations on the timing requirements for this
+stage.
+
+The stage one data directory will initially be empty. Once all stage one
+searches on all enrollment set partitions (over multiple nodes) have completed,
+the \testdriver will merge the contents of stage one data directories for a
+given search ID into a \textit{single} directory. This means that for a given
+search ID, all files written in the stage one data directory must have a unique
+filename, or risk being overwritten during the merge. This can be accomplished
+by appending the enrollment set partition number to any file written during this
+identification stage. Refer to \Cref{fig:api-stageone-example} for an example.
+
+\begin{figure}
+\begin{framed}
+	The following sequences may occur simultaneously on the same or
+	different physical nodes:\vspace{1ex}
+	\begin{itemize}
+		\item Node 0:
+			\begin{itemize}
+				\item \code{initIdentificationStageOne(%
+				/* ... */, 0);}
+				\item \code{identifyTemplateStageOne(%
+				"search001", tmpl, "/node0RAMDisk/search001")}
+				\begin{itemize}
+					\item \implementation writes %
+					\code{/node0RAMDisk/%
+					search001/results-0.txt}
+				\end{itemize}
+			\end{itemize}
+		\item Node 1:
+			\begin{itemize}
+				\item \code{initIdentificationStageOne(%
+				/* ... */, 1);}
+				\item \code{identifyTemplateStageOne(%
+				"search001", tmpl, "/node1RAMDisk/search001")}
+				\begin{itemize}
+					\item \implementation writes %
+					\code{/node1RAMDisk/%
+					search001/results-1.txt}
+				\end{itemize}
+			\end{itemize}
+		\item Node 2:
+			\begin{itemize}
+				\item \code{initIdentificationStageOne(%
+				/* ... */, 2);}
+				\item \code{identifyTemplateStageOne(%
+				"search001", tmpl, "/node2RAMDisk/search001")}
+				\begin{itemize}
+					\item \implementation writes %
+					\code{/node2RAMDisk/%
+					search001/results-2.txt}
+				\end{itemize}
+			\end{itemize}
+	\end{itemize}
+
+	\vspace{1ex}
+	After all calls to \code{identifyTemplateStageOne()} for a given search
+	ID have completed, the \testdriver will merge the contents of the
+	individual stage one data directories into a single directory that will
+	be passed to \code{identifyTemplateStageTwo()}. In this example, the
+	contents of that directory is:
+	\begin{itemize}
+		\item \code{results-0.txt}
+		\item \code{results-1.txt}
+		\item \code{results-2.txt}
+	\end{itemize}
+
+\end{framed}
+\captionsetup{font=footnotesize}
+\caption{Example of stage one data directory contents.}
+\label{fig:api-stageone-example}
+\end{figure}
+
 
 A UML sequence diagram for this process is provided in
 \Cref{fig:api-identification_stage_one}.
@@ -331,11 +406,11 @@ If a search template failed to extract, it will not be passed to this method.
 If a failure occurs while searching during this stage, an appropriate error
 code should be returned. The \implementation is \textit{still} responsible for
 recording information about the search in the specified area for use in
-\stagetwoidentification, if desired. All Search IDs passed to 
+\stagetwoidentification, if desired. All Search IDs passed to
 \stageoneidentification will be passed to \stagetwoidentification, regardless
 of failure. It is the \implementation's descision whether or not to return
 an empty candidate list from \stagetwoidentification as a result of a failure
-in \stageoneidentification. 
+in \stageoneidentification.
 
 \begin{figure}
 	\centering
