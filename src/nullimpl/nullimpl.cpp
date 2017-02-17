@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cmath>
 
 #include <be_error.h>
 #include <be_io_propertiesfile.h>
@@ -82,8 +83,8 @@ N2N::NullImplementation::finalizeEnrollment(
 	if (nodeCount == 0)
 		return {StatusCode::InsufficientResources, "0 nodes"};
 
-	const uint64_t tmplPerNode{enrollmentTemplates.getCount() / nodeCount};
-	auto iter = enrollmentTemplates.begin();
+	const uint64_t tmplPerNode = std::ceil(enrollmentTemplates.getCount() /
+	    static_cast<float>(nodeCount));
 	for (uint8_t n{0}; n < nodeCount; ++n) {
 		std::shared_ptr<BE::IO::RecordStore> rs;
 		try {
