@@ -473,10 +473,6 @@ namespace N2N
 		 * exception string may contain additional information.
 		 *
 		 * @note
-		 * 90% of calls to this method must return in three seconds or
-		 * less.
-		 *
-		 * @note
 		 * This method must complete with 5 minutes. Reasonable
 		 * multithreading is permitted.
 		 */
@@ -519,6 +515,10 @@ namespace N2N
 		 * size. All BiometricEvaluation::Memory::uint8Array::size()
 		 * bytes of `enrollmentTemplate` will be provided to the
 		 * N2N::Interface implementation during finalizeEnrollment().
+		 *
+		 * @note
+		 * 90% of calls to this method must return in three seconds or
+		 * less.
 		 *
 		 * @attention
 		 * Multithreading and other multiprocessing techniques are
