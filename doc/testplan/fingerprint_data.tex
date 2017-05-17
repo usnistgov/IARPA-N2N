@@ -1,4 +1,5 @@
 \section{Fingerprint Data}
+\label{sec:fingerprint_data}
 
 \subsection{New Imagery}
 All \scanners are required to save images in JPEG-2000 format. These images
@@ -13,14 +14,29 @@ Complete guidelines on the required image format are available on
 \subsection{Background Imagery}
 The \lib shall be required to handle creating enrollment and search templates
 from a large quantity of ``legacy'' operational rolled imagery. This imagery
-will be used to seed an enrollment set on which the \lib will search.
+will be used to seed an enrollment set on which the \lib will search. Images
+may originate from inked fingerprint card scans or live scan devices.
 
 This background imagery shall be provided to the \lib as uncompressed raw 8-bit
 grayscale, as transmitted according to \Cref{sec:data-interchange}. The images
-will be scanned at $500$ pixels per inch horizontal and vertical resolution.
+will be scanned at $500$ or $1\,000$ pixels per inch horizontal and vertical
+resolution. \Libs should call the \code{getResolution()} method on images and
+process them into a format suitable for matching, if necessary.
 
 All data provided as background imagery will contain at most one finger.
 Fingerprint segmentation routines will not be required.
+
+\subsection{Latent Imagery}
+The \lib may support searching latent fingerprint images. These images will
+be cropped to include a single latent fingerprint per image. Some exceptions
+to this rule may occur due to overlapping prints, but it is expected that
+automated latent matching software accounts for such inputs. There are no
+guarantees made regarding the orientation of the fingerprint in the image.
+
+Latent images may differ in the number of channels, bits per channel, and
+resolution. \Libs should call the \code{getColorDepth()}, \code{getBitDepth()},
+and \code{getResolution()} methods on these images and process them into a
+format suitable for matching, if necessary.
 
 \subsection{Proprietary Data}
 In addition to a JPEG-2000 image, participants have the option to save a
