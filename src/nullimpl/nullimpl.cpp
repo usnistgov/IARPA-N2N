@@ -233,7 +233,7 @@ N2N::NullImplementation::identifyTemplateStageTwo(
 				++endOffset;
 
 			const auto tokens = BE::Text::split(std::string(
-			    file[endOffset], endOffset - offset), ',');
+			    (char *)&file[offset], endOffset - offset), ',');
 			if (tokens.size() != 2)
 				return {StatusCode::Vendor, "Malformed stage "
 				    "one data for " + searchID + " in file " +
