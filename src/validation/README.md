@@ -18,34 +18,34 @@ Package Contents
 
  * Interaction Required:
      * [`config/`](
-       https://github.com/usnistgov/IARPA-N2N/tree/master/validation/config):
+       https://github.com/usnistgov/IARPA-N2N/tree/master/src/validation/config):
        Directory where all required configuration files must be placed. You
        might not have any configuration files.
      * [`lib/`](
-       https://github.com/usnistgov/IARPA-N2N/tree/master/validation/lib):
+       https://github.com/usnistgov/IARPA-N2N/tree/master/src/validation/lib):
        Directory where all required libraries must be placed. There must
        be at least one "core" library, and that library **must** follow the
        N2N library naming convention.
      * [`validate`](
-       https://github.com/usnistgov/IARPA-N2N/tree/master/validation/validate):
+       https://github.com/usnistgov/IARPA-N2N/tree/master/src/validation/validate):
        Script to automate running the validation driver and perform limited
        sanity checks on the output.
  * Supporting Files:
      * [`Makefile`](
-       https://github.com/usnistgov/IARPA-N2N/tree/master/validation/src/Makefile):
+       https://github.com/usnistgov/IARPA-N2N/tree/master/src/validation/src/Makefile):
        Builds the validation source code files.
      * [`n2n.h`](
        https://github.com/usnistgov/IARPA-N2N/tree/master/src/include/n2n.h):
        API specification for N2N.
      * [`src/`](
-       https://github.com/usnistgov/IARPA-N2N/tree/master/validation/src/):
+       https://github.com/usnistgov/IARPA-N2N/tree/master/src/validation/src/):
        C++ headers and source codes for the validation drivers.
      * `images/`:
        RecordStores of ANSI/NIST-ITL files containing sample imagery. You must
        sign a usage agreement to obtain this directory from NIST, and then place
        it in the `validation` directory.
      * [`VERSION`](
-       (https://github.com/usnistgov/IARPA-N2N/blob/master/validation/VERSION):
+       (https://github.com/usnistgov/IARPA-N2N/blob/master/src/validation/VERSION):
        Version number of the validation package.
 
 Requirements
@@ -68,7 +68,7 @@ However, the following CentOS packages are required to be installed:
 
 You will also need
 [`libbiomeval`](
-https://github.com/usnistgov/BiometricEvaluation/releases/download/v10.0/libbiomeval-10.0-2.x86_64.rpmm),
+https://github.com/usnistgov/BiometricEvaluation/releases/download/v10.0/libbiomeval-10.0-2.x86_64.rpm),
 [`libbiomeval-devel`](
 https://github.com/usnistgov/BiometricEvaluation/releases/download/v10.0/libbiomeval-devel-10.0-2.noarch.rpm),
 and  [`rstool`](
