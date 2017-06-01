@@ -39,21 +39,34 @@ implementation by calling `N2N::Interface::getImplementation()`, and perform
 various template generation and identification operations.
 
 Implementing this API requires the use of
-[`libbiomeval`](https://github.com/usnistgov/BiometricEvaluation).
+[`libbiomeval`](https://github.com/usnistgov/BiometricEvaluation) ([release 10](
+https://github.com/usnistgov/BiometricEvaluation/releases/tag/v10.0)).
 
 Submitting
 ----------
-*Submissions are not yet being accepted.*
+Submitting an N2N API implementation involves submitting the output of a
+*validation package* to NIST via e-mail.
+
+  1. Download the latest [release](
+     https://github.com/usnistgov/IARPA-N2N/releases).
+  2. Follow the instructions in [src/validation/README.md](
+     https://github.com/usnistgov/IARPA-N2N/blob/master/src/validation/README.md).
+  3. Encrypt the validation output and [send to NIST](
+     mailto:N2NChallenge@nist.gov).
+
+To complete validation, you must have the required validation imagery. NIST will
+e-mail you this imagery once you have signed and returned the *N2N Validation
+Data Usage Agreement* to IARPA. This dataset is not yet available to the general
+public, and as such, the Data Usage Agreement has only been made available to
+registered N2N participants.
 
 Important Dates
 ---------------
-*Dates are currently tentative.*
-
- * 15 May 2017: Comments regarding API are due (via [GitHub](
+ * ~~15 May 2017: Comments regarding API are due (via [GitHub](
                 https://github.com/usnistgov/IARPA-N2N/issues) or [e-mail](
-                mailto:N2NChallenge@nist.gov)).
- * 01 June 2017: NIST will begin receiving validation submissions.
- * 01 July 2017: Submission deadline. Due to the time required to create several
+                mailto:N2NChallenge@nist.gov)).~~
+ * ~~01 June 2017: NIST will begin receiving validation submissions.~~
+ * **01 July 2017**: Submission deadline. Due to the time required to create several
                  million templates that cannot overlap with the data collection,
                  this date **cannot** be extended.
 

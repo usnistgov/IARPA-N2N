@@ -1,0 +1,18 @@
+# This software was developed at the National Institute of Standards and
+# Technology (NIST) and the Intelligence Advanced Research Projects Activity
+# (IARPA) by employees of the Federal Government in the course of their
+# official duties. Pursuant to title 17 Section 105 of the United States Code,
+# this software is not subject to copyright protection and is in the public
+# domain. NIST and IARPA assume no responsibility whatsoever for its use by
+# other parties, and makes no guarantees, expressed or implied, about its
+# quality, reliability, or any other characteristic.
+
+.PHONY: all clean
+
+
+all:
+	$(MAKE) -C src $@
+
+clean:
+	$(RM) -r $(shell grep OUTPUT_DIR -m 1 validate | xargs basename)*
+	$(MAKE) -C src $@

@@ -1,0 +1,717 @@
+#!/bin/bash
+
+# URL containing the most recent version number of the validation package
+VALIDATION_VERS_URL="https://raw.githubusercontent.com/usnistgov/IARPA-N2N/master/validation/VERSION"
+# URL where information about the validation package can be found
+VALIDATION_PROMO_URL="https://github.com/usnistgov/IARPA-N2N/tree/master/validation"
+# URL where the complete validation package can be downloaded
+VALIDATION_DL_URL="https://github.com/usnistgov/IARPA-N2N/releases"
+
+# Directory containing validation materials
+WD=$(readlink -f $(dirname $0))
+# Version of the N2N validation package
+VALIDATION_VERSION=$(cat "${WD}"/VERSION)
+
+# Directory where compiled validation binaries are placed
+N2N_BIN_DIR="${WD}/bin"
+# Directory where source code for validation binaries are stored
+N2N_SRC_DIR="${WD}/src"
+# Name of directory where participant should place all libraries
+N2N_LIB_DIR="${WD}/lib"
+# Name of directory where participant should place all libraries
+N2N_CONFIG_DIR="${WD}/config"
+# Name of directory where images should be untarred
+N2N_IMAGES_DIRECTORY="${WD}/images"
+# Where to store output from validation
+OUTPUT_DIR="${WD}/validation_output"
+
+# Validation driver to print version information
+BINARY_VERSION="${N2N_BIN_DIR}/n2nv_version"
+# Validation driver to create enrollment and search templates
+BINARY_MAKE_TEMPLATES="${N2N_BIN_DIR}/n2nv_makeTemplates"
+# Validation driver to finalize enrollment templates
+BINARY_FINALIZE="${N2N_BIN_DIR}/n2nv_finalize"
+# Validation driver to perform stage one of identification
+BINARY_STAGE_ONE="${N2N_BIN_DIR}/n2nv_identStageOne"
+# Validation driver to perform stage two of identification
+BINARY_STAGE_TWO="${N2N_BIN_DIR}/n2nv_identStageTwo"
+
+# Name of the file that logs output of creating enrollment templates
+MAKE_ENROLLMENT_LOG="${OUTPUT_DIR}/makeEnrollment.log"
+# Name of the file that logs output of finalizing enrollment set
+FINALIZE_ENROLLMENT_LOG="${OUTPUT_DIR}/finalizeEnrollment.log"
+# Name of the file that logs output of making search templates of captures
+MAKE_SEARCH_CAPTURE_LOG="${OUTPUT_DIR}/makeSearchCapture.log"
+# Name of the file that logs output of making search templates of latents
+MAKE_SEARCH_LATENT_LOG="${OUTPUT_DIR}/makeSearchLatent.log"
+# Name of the file that logs output of identification stage one for captures
+IDENT_STAGE_ONE_CAPTURE_LOG="${OUTPUT_DIR}/identStageOneCapture.log"
+# Name of the file that logs output of identification stage two for captures
+IDENT_STAGE_TWO_CAPTURE_LOG="${OUTPUT_DIR}/identStageTwoCapture.log"
+# Name of the file that logs output of identification stage one for latents
+IDENT_STAGE_ONE_LATENT_LOG="${OUTPUT_DIR}/identStageOneLatent.log"
+# Name of the file that logs output of identification stage two for latents
+IDENT_STAGE_TWO_LATENT_LOG="${OUTPUT_DIR}/identStageTwoLatent.log"
+# Name of the file that logs the output of
+VERSION_LOG="${OUTPUT_DIR}/version.log"
+# Name of the file that logs compilation
+COMPILE_LOG="${OUTPUT_DIR}/compile.log"
+
+# Packages required to run this script
+REQUIRED_PKGS="binutils centos-release coreutils curl file findutils gawk gcc grep iputils libbiomeval-devel make rstool sed which yum"
+
+# Make failing return codes persist across pipes
+set -o pipefail
+
+N2N_LATENT_SUPPORT=1
+if [ $# -eq 1 ] && [ "$1" == "--without-latents" ]; then
+	N2N_LATENT_SUPPORT=0
+fi
+
+# Convenience function to print a failure method and exit
+# All params are echoed, one per line.
+fail()
+{
+	echo "[FAIL]"
+	if [ $# -ne 0 ]; then
+		echo
+		echo "********************************************************************************"
+		IFS=,
+		for i in $*; do
+			echo $i
+		done
+	fi
+	echo "********************************************************************************"
+	date
+	exit 1
+}
+
+date
+
+# Check for images (provided after signing usage agreement)
+echo -n "Checking for validation images... "
+if ! [ -d "${N2N_IMAGES_DIRECTORY}" ]; then 
+	fail "You do not have the images necessary to run this validation. Please sign the data usage agreement provided by NIST/IARPA to receive the images and proceed with validation."
+fi
+if [ "$(md5sum "${N2N_IMAGES_DIRECTORY}/search_latent.rs/rsdb" 2>&1 | awk '{print $1}' | tr -d '\n')" != "549834be2eb9e6d91da1e9fd5f83eed5" ]; then
+	fail "${N2N_IMAGES_DIRECTORY}/search_latent.rs is corrupt. Please ensure you're using the latest version of the validation package and validation imagery."
+fi
+if [ "$(md5sum "${N2N_IMAGES_DIRECTORY}/search_capture.rs/rsdb" 2>&1 | awk '{print $1}' | tr -d '\n')" != "94ada519befdac726a245a9e737de8ff" ]; then
+	fail "${N2N_IMAGES_DIRECTORY}/search_capture.rs is corrupt. Please ensure you're using the latest version of the validation package and validation imagery."
+fi
+if [ "$(md5sum "${N2N_IMAGES_DIRECTORY}/enrollment.rs/rsdb" 2>&1 | awk '{print $1}' | tr -d '\n')" != "8da6b6d9a439bece599c2e24812350ef" ]; then
+	fail "${N2N_IMAGES_DIRECTORY}/enrollment.rs is corrupt. Please ensure you're using the latest version of the validation package and validation imagery."
+fi
+echo "[OKAY]"
+
+# Check for required packages
+echo -n "Checking for required packages... "
+which yum > /dev/null
+if [ $? -ne 0 ]; then
+	fail "which and yum are required to be installed for validation"
+fi
+for pkg in $REQUIRED_PKGS; do
+	yum -q list installed $pkg > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		fail "The required package \"$pkg\" was not installed." \
+		    "Try \`yum install $pkg\` to install \"$pkg.\""
+	fi
+done
+echo "[OKAY]"
+
+# Confirm validation package version, if possible
+VALIDATION_VERSION_CHECKED=0
+echo -n "Checking validation version... "
+# d.root-servers.net -> 199.7.91.13
+ping -c 1 199.7.91.13 > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+	CURRENT_VERSION=$(curl -m 10 -f $VALIDATION_VERS_URL 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		echo "(connection failure) [SKIP]"
+	else
+		VALIDATION_VERSION_CHECKED=1
+		if [ "$CURRENT_VERSION" != "$VALIDATION_VERSION" ]; then
+			fail "You are running an old version of the validation package ($VALIDATION_VERSION)." "Please download $CURRENT_VERSION from:" $VALIDATION_DL_URL
+		else
+			echo "(${VALIDATION_VERSION}) [OKAY]"
+		fi
+	fi
+else
+	echo "(no Internet connection) [SKIP]"
+fi
+
+# Confirm OS
+CENTOS_VER="CentOS Linux release 7.2.1511 (Core)"
+echo -n "Checking OS Version... "
+if [ ! -e /etc/redhat-release ]; then
+	fail "You do not appear to be using the appropriate operating system." \
+	    "Please use $CENTOS_VER."
+fi
+if [ "`cat /etc/redhat-release | sed -e s/[[:space:]]$//`" != "$CENTOS_VER" ]; then
+	fail "You do not appear to be using the appropriate CentOS version." \
+	    "Please use $CENTOS_VER."
+fi
+echo "($(echo $CENTOS_VER | awk '{print $1,$4}')) [OKAY]"
+
+# Check for properly named library
+echo -n "Looking for core library... "
+core_lib=
+for libname in $(ls "${N2N_LIB_DIR}" | grep -E libn2n_[A-Za-z0-9]\+_[0-9]\+\.\(a\|so\)); do
+	if [ "${core_lib}" != "" ]; then
+		fail "More than one core library found. Rename:" \
+		    $libname
+	fi
+	core_lib=$libname
+done
+if [ "${core_lib}" == "" ]; then
+	fail "No core library found. Please review library naming conventions."
+fi
+
+# If SONAME is present, check that it is the same as the lib name
+file "${N2N_LIB_DIR}/${core_lib}" | grep shared > /dev/null
+if [ $? -eq 0 ]; then
+	SONAME=$(objdump -p "${N2N_LIB_DIR}/${core_lib}" | grep SONAME | awk '{print $2}')
+	if [ "$SONAME" != "" ]; then
+		if [ "$SONAME" != "${core_lib}" ]; then
+			fail "The SONAME of ${core_lib} is not valid. ${core_lib} was likely renamed after being built. The SONAME must be the same name as the N2N core library."
+		fi
+	fi
+fi
+COMPANY=$(echo ${core_lib} | awk -F_ '{print $2}')
+LIB_REVISION=$(echo ${core_lib} | awk -F_ '{print $3}' | sed 's/\([0-9]\+\)\..*/\1/')
+echo "($core_lib) [OKAY]"
+
+# Check for configuration files
+echo -n "Checking configuration files... "
+if [ -d "${N2N_CONFIG_DIR}" ]; then
+	num_config=0
+	for config in $(ls "${N2N_CONFIG_DIR}"); do
+		if [ "$config" != "README" ]; then
+			let num_config="$num_config + 1"
+		fi
+	done
+	if [ $num_config -gt 0 ]; then
+		if [ -w "${N2N_CONFIG_DIR}" ]; then
+			fail "${N2N_CONFIG_DIR} is writable but should be 555."
+		else
+			if [ $num_config -eq 1 ]; then
+				echo "($num_config config) [OKAY]"
+			else
+				echo "($num_config configs) [OKAY]"
+			fi
+		fi
+	else
+		echo "(no configs) [OKAY]"
+	fi
+else
+	echo "(no configs) [OKAY]"
+fi
+
+# Make log output directory
+echo -n "Checking for previous validation attempts... "
+output_found=$(find "${WD}" -maxdepth 1 -type d -name "$(basename ${OUTPUT_DIR})*" -print -quit)
+if [ "$output_found" != "" ]; then
+	fail "Please remove previous validation attempt:" "$output_found" \
+	    "" "\`make clean\` will bring you back to a clean state."
+fi
+mkdir -p "${OUTPUT_DIR}"
+echo "[OKAY]"
+
+# Compile
+echo -n "Building... "
+make -C "${N2N_SRC_DIR}" clean 2>&1 | tee "${COMPILE_LOG}" > /dev/null
+make -C "${N2N_SRC_DIR}" 2>&1 | tee "${COMPILE_LOG}" > /dev/null
+if [ $? -ne 0 ]; then
+	fail "An error occurred during compilation. Please review:" \
+	    "${COMPILE_LOG}"
+fi
+md5sum "${N2N_LIB_DIR}/"* >> "${COMPILE_LOG}"
+md5sum "${N2N_CONFIG_DIR}/"* >> "${COMPILE_LOG}"
+cat /etc/redhat-release >> "${COMPILE_LOG}"
+ldd "${BINARY_VERSION}" >> "${COMPILE_LOG}"
+echo "Validation Version = ${VALIDATION_VERSION}" >> "${COMPILE_LOG}"
+# Check that binary shows a dependency on the core library (if lib is shared)
+file "${N2N_LIB_DIR}/${core_lib}" | grep shared > /dev/null
+if [ $? -eq 0 ]; then
+	ldd "${BINARY_VERSION}" | grep "${N2N_LIB_DIR}/${core_lib}" 2>&1 > /dev/null
+	if [ $? -ne 0 ]; then
+		fail "${core_lib} is not required by ${BINARY_VERSION}. ${core_lib} " \
+		    "was either renamed after being built or ${BINARY_VERSION} is "   \
+		    "linking against a version of ${core_lib} from a "        \
+		    "directory outside of the validation package. Please "    \
+		    "review: ${COMPILE_LOG}"
+	fi
+fi
+echo "[OKAY]"
+
+# Check library version number
+echo -n "Gathering version info... "
+cd "${WD}" && { time "${BINARY_VERSION}"; } 2>&1 | \
+    tee "${VERSION_LOG}" > /dev/null
+if [ $? -ne 0 ]; then
+	fail 'An error occurred while gathering library version info. Please review:' \
+	    "${VERSION_LOG}"
+fi
+ret_IDENTIFIER=$(grep Identifier "${VERSION_LOG}" | awk '{print $2}');
+if [ "$ret_IDENTIFIER" != "$COMPANY" ]; then
+	fail "Core library name's identifier parameter is different than in getIDs()."
+fi
+ret_REVISION=$(grep Revision "${VERSION_LOG}" | awk '{print $2}');
+if [ "$ret_REVISION" != "$LIB_REVISION" ]; then
+	fail "Core library name's revision parameter is different than in getIDs()."
+fi
+echo "[OKAY]"
+
+################################################################################
+# Run enrollment template creation
+################################################################################
+echo -n "Generating enrollment templates... "
+tee "${OUTPUT_DIR}/$(basename ${MAKE_ENROLLMENT_LOG} log)conf" << EOF > /dev/null
+Number of Processes = 1
+Configuration Directory = ${N2N_CONFIG_DIR}
+Template Type = Enrollment
+Output Directory = ${OUTPUT_DIR}
+Prefix = $(basename ${MAKE_ENROLLMENT_LOG} .log)-
+Standard RecordStore = ${WD}/images/enrollment.rs
+Proprietary RecordStore =
+EOF
+cd "${WD}" && { time "${BINARY_MAKE_TEMPLATES}" \
+    "${OUTPUT_DIR}/$(basename ${MAKE_ENROLLMENT_LOG} log)conf"; } 2>&1 | \
+    tee ${MAKE_ENROLLMENT_LOG}.debug > /dev/null
+if [ $? -ne 0 ]; then
+	fail 'An error occurred during template creation. Please review:' \
+	    "${MAKE_ENROLLMENT_LOG}.debug"
+fi
+
+# Merge logs from multiple processes
+find "${OUTPUT_DIR}" -type f -name $(basename ${MAKE_ENROLLMENT_LOG} .log)-* -exec sed -n '2,$ p' {} \; | sort -k3 > ${MAKE_ENROLLMENT_LOG}
+header=$(head -n 1 "${OUTPUT_DIR}"/$(basename ${MAKE_ENROLLMENT_LOG} .log)-0.log | sed 's/Description: \(.*\)/\1/')
+#find "${OUTPUT_DIR}" -type f -name $(basename ${MAKE_ENROLLMENT_LOG} .log)-* -exec rm {} \;
+echo -e "$header\n$(cat ${MAKE_ENROLLMENT_LOG})" > "${MAKE_ENROLLMENT_LOG}"
+
+# Check lines of template creation log
+if [ $(wc -l ${MAKE_ENROLLMENT_LOG} | awk '{print $1}') -ne 11 ]; then
+	fail "Invalid number of lines in enrollment template creation log. " \
+	    "Please review: ${MAKE_ENROLLMENT_LOG}"
+fi
+
+# Check format of creation log
+unsuccessful_rv_enrollment=0
+OLDIFS=$IFS; IFS=$'\n';
+for line in $(sed -n '2,$ p' ${MAKE_ENROLLMENT_LOG}); do
+	formatTest=$(echo $line | sed 's/E [0-9]\{10\} N2N_E[0-9]\{3\}.an2 \([0-9]\{1,\} \)\{6\}\[<\[.*\]>\]/test/')
+	if [ $? -ne 0 ] || [ "$formatTest" != "test" ]; then
+		fail "The template creation log is invalid. Please review:" \
+		    "${MAKE_ENROLLMENT_LOG}" $line
+	fi
+
+	# Check for successful return values
+	rv=$(echo $line | awk '{print $9}')
+	if [ $rv -ne 0 ]; then
+		unsuccessful_rv_enrollment=1
+
+		# Failure to enroll should have empty template
+		if [ "$(echo $line | awk '{print $3}')" != "0" ]; then
+			fail "Invalid enrollment template size on failure. " \
+			    "Please review: ${MAKE_ENROLLMENT_LOG}" $line
+		fi
+	fi
+
+	apistate=$(echo $line | awk '{print $8}')
+	if [ $apistate -ne 5 ]; then
+		fail "Enrollment template creation failed to return. " \
+		    "Please review: ${MAKE_ENROLLMENT_LOG}" $line
+	fi
+done
+IFS=$OLDIFS
+
+echo "[OKAY]"
+
+# Merge enrollment RecordStores
+rstool merge -s "${OUTPUT_DIR}/enrollment.rs" "${OUTPUT_DIR}"/$(basename ${MAKE_ENROLLMENT_LOG} .log)-*.rs
+rm -rf "${OUTPUT_DIR}"/$(basename ${MAKE_ENROLLMENT_LOG} .log)-*.rs
+
+################################################################################
+# Finalize enrollment set
+################################################################################
+echo -n "Finalizing enrollment set... "
+tee "${OUTPUT_DIR}/$(basename ${FINALIZE_ENROLLMENT_LOG} log)conf" << EOF > /dev/null
+Configuration Directory = ${N2N_CONFIG_DIR}
+Enrollment Directory = ${OUTPUT_DIR}/finalized_enrollment_set
+Enrollment RecordStore = ${OUTPUT_DIR}/enrollment.rs
+RAM Per Node = 20971520
+Number of Nodes = 5
+EOF
+cd "${WD}" && { time "${BINARY_FINALIZE}" \
+    "${OUTPUT_DIR}/$(basename ${FINALIZE_ENROLLMENT_LOG} log)conf"; } 2>&1 | \
+    tee ${FINALIZE_ENROLLMENT_LOG} > /dev/null
+if [ $? -ne 0 ]; then
+	fail 'An error occurred during enrollment set finalization. ' \
+	    "Please review: ${FINALIZE_ENROLLMENT_LOG}"
+fi
+echo "[OKAY]"
+
+################################################################################
+# Run search template creation
+################################################################################
+generateSearchTemplates()
+{
+if [ $# -ne 1 ]; then
+	echo "Usage: $FUNCNAME [capture|latent]"
+	return
+fi
+
+
+searchlog=""
+searchtype=""
+searchinput=""
+case "$1" in
+	latent)
+		searchlog=${MAKE_SEARCH_LATENT_LOG}
+		searchtype="Search Latent"
+		searchinput="${WD}/images/search_latent.rs"
+		expectedNumLines=21
+	;;
+	capture)
+		searchlog=${MAKE_SEARCH_CAPTURE_LOG}
+		searchtype="Search Capture"
+		searchinput="${WD}/images/search_capture.rs"
+		expectedNumLines=11
+	;;
+esac
+
+
+echo -n "Generating search templates (${searchtype})... "
+tee "${OUTPUT_DIR}/$(basename ${searchlog} log)conf" << EOF > /dev/null
+Number of Processes = 1
+Configuration Directory = ${N2N_CONFIG_DIR}
+Template Type = ${searchtype}
+Output Directory = ${OUTPUT_DIR}
+Prefix = $(basename ${searchlog} .log)-
+Standard RecordStore = ${searchinput}
+Proprietary RecordStore =
+EOF
+cd "${WD}" && { time "${BINARY_MAKE_TEMPLATES}" \
+    "${OUTPUT_DIR}/$(basename ${searchlog} log)conf"; } 2>&1 | \
+    tee ${searchlog}.debug > /dev/null
+if [ $? -ne 0 ]; then
+	fail 'An error occurred during template creation. Please review:' \
+	    "${searchlog}.debug"
+fi
+
+# Merge logs from multiple processes
+find "${OUTPUT_DIR}" -type f -name $(basename ${searchlog} .log)-* -exec sed -n '2,$ p' {} \; | sort -k3 > ${searchlog}
+header=$(head -n 1 "${OUTPUT_DIR}"/$(basename ${searchlog} .log)-0.log | sed 's/Description: \(.*\)/\1/')
+#find "${OUTPUT_DIR}" -type f -name $(basename ${searchlog} .log)-* -exec rm {} \;
+echo -e "$header\n$(cat ${searchlog})" > "${searchlog}"
+
+# Check lines of template creation log
+if [ $(wc -l ${searchlog} | awk '{print $1}') -ne ${expectedNumLines} ]; then
+	fail "Invalid number of lines in search template creation log. " \
+	    "Please review: ${searchlog}"
+fi
+
+# Check format of creation log
+unsuccessful_rv_search=0
+OLDIFS=$IFS; IFS=$'\n';
+for line in $(sed -n '2,$ p' ${searchlog}); do
+	formatTest=$(echo $line | sed 's/E [0-9]\{10\} N2N_S[0-9]\{3\}_[CL]\(-[1-4]\)\{0,1\}.an2 \([0-9]\{1,\} \)\{6\}\[<\[.*\]>\]/test/')
+	if [ $? -ne 0 ] || [ "$formatTest" != "test" ]; then
+		fail "The search template creation log is invalid. Please review:" \
+		    "${searchlog}" $line
+	fi
+
+	# Check for successful return values
+	rv=$(echo $line | awk '{print $9}')
+	if [ $rv -ne 0 ]; then
+		unsuccessful_rv_enrollment=1
+
+		# Failure to enroll should have empty template
+		if [ "$(echo $line | awk '{print $3}')" != "0" ]; then
+			fail "Invalid search template size on failure. " \
+			    "Please review: ${searchlog}" $line
+		fi
+	fi
+
+	apistate=$(echo $line | awk '{print $8}')
+	if [ $apistate -ne 5 ]; then
+		fail "Search template creation failed to return. " \
+		    "Please review: ${searchlog}" $line
+	fi
+done
+IFS=$OLDIFS
+
+echo "[OKAY]"
+
+# Merge enrollment RecordStores
+rstool merge -s "${OUTPUT_DIR}/$(basename ${searchinput})" "${OUTPUT_DIR}"/$(basename ${searchlog} .log)-*.rs
+rm -rf "${OUTPUT_DIR}"/$(basename ${searchlog} .log)-*.rs
+}
+
+generateSearchTemplates "capture"
+if [ ${N2N_LATENT_SUPPORT} -eq 1 ]; then
+	generateSearchTemplates "latent"
+fi
+
+################################################################################
+# Run stage one identification
+################################################################################
+stageOneIdentificaiton()
+{
+if [ $# -ne 1 ]; then
+	echo "Usage: $FUNCNAME [capture|latent]"
+	return
+fi
+
+case "$1" in
+	latent)
+		identlog=${IDENT_STAGE_ONE_LATENT_LOG}
+		identtype="Latent"
+		identinput="${WD}/images/search_latent.rs"
+		identoutput="${OUTPUT_DIR}/stage_one_latent"
+	;;
+	capture)
+		identlog=${IDENT_STAGE_ONE_CAPTURE_LOG}
+		identtype="Capture"
+		identinput="${WD}/images/search_capture.rs"
+		identoutput="${OUTPUT_DIR}/stage_one_capture"
+	;;
+esac
+
+echo -n "Performing Identification: Stage One (${identtype})... "
+tee "${OUTPUT_DIR}/$(basename ${identlog} log)conf" << EOF > /dev/null
+Configuration Directory = ${N2N_CONFIG_DIR}
+Enrollment Directory = ${OUTPUT_DIR}/finalized_enrollment_set
+Search Template Type = ${identtype}
+Search Template RecordStore = ${identinput}
+Number of Nodes = 5
+Prefix = $(basename ${identlog} .log)-
+Number of Processes = 2
+Output Directory = ${OUTPUT_DIR}
+Stage One Data Root = ${identoutput}
+EOF
+cd "${WD}" && { time "${BINARY_STAGE_ONE}" \
+    "${OUTPUT_DIR}/$(basename ${identlog} log)conf"; } 2>&1 | \
+    tee ${identlog}.debug > /dev/null
+if [ $? -ne 0 ]; then
+	fail 'An error occurred during stage one identification. ' \
+	    "Please review: ${identlog}.debug"
+fi
+
+# Check format of each line of each identification stage one log file
+unsuccessful_rv_identone=0
+for f in $(find "${OUTPUT_DIR}" -type f -name $(basename ${identlog} .log)-*); do
+	# Strip "Description: " from each logfile
+	sed -i'' '1,1 s/Description: //' $f
+
+	OLDIFS=$IFS; IFS=$'\n';
+	for line in $(sed -n '2,$ p' $f); do
+		formatTest=$(echo $line | sed 's/E [0-9]\{10\} N2N_S[0-9]\{3\}_[CL]\(-[1-4]\)\{0,1\}.an2 \([0-9]\{1,\} \)\{4\}\[<\[.*\]>\]/test/')
+		if [ $? -ne 0 ] || [ "$formatTest" != "test" ]; then
+			fail "The identification stage one log is invalid. " \
+			    "Please review: ${searchlog}" $line
+		fi
+
+
+		# Check for successful return values
+		rv=$(echo $line | awk '{print $7}')
+		if [ $rv -ne 0 ]; then
+			unsuccessful_rv_identone=1
+		fi
+
+		apistate=$(echo $line | awk '{print $6}')
+		if [ $apistate -ne 5 ]; then
+			fail "Identification stage one failed to return. " \
+			    "Please review: ${identlog}" $line
+		fi
+	done
+done
+
+IFS=$OLDIFS
+echo "[OKAY]"
+}
+
+stageOneIdentificaiton "capture"
+if [ ${N2N_LATENT_SUPPORT} -eq 1 ]; then
+	stageOneIdentificaiton "latent"
+fi
+
+################################################################################
+# Run stage two identification
+################################################################################
+stageTwoIdentificaiton()
+{
+if [ $# -ne 1 ]; then
+	echo "Usage: $FUNCNAME [capture|latent]"
+	return
+fi
+
+case "$1" in
+	latent)
+		identlog=${IDENT_STAGE_TWO_LATENT_LOG}
+		identtype="Latent"
+		searchTemplates="${WD}/images/search_latent.rs"
+		stageOneDir="${OUTPUT_DIR}/stage_one_latent"
+		expectedNumLines=6
+	;;
+	capture)
+		identlog=${IDENT_STAGE_TWO_CAPTURE_LOG}
+		identtype="Capture"
+		searchTemplates="${WD}/images/search_capture.rs"
+		stageOneDir="${OUTPUT_DIR}/stage_one_capture"
+		expectedNumLines=11
+	;;
+esac
+
+echo -n "Performing Identification: Stage Two (${identtype})... "
+tee "${OUTPUT_DIR}/$(basename ${identlog} log)conf" << EOF > /dev/null
+Configuration Directory = ${N2N_CONFIG_DIR}
+Enrollment Directory = ${OUTPUT_DIR}/finalized_enrollment_set
+Search Template Type = ${identtype}
+Search Template RecordStore = ${searchTemplates}
+Prefix = $(basename ${identlog} .log)-
+Number of Processes = 2
+Output Directory = ${OUTPUT_DIR}
+Stage One Data Root = ${stageOneDir}
+EOF
+cd "${WD}" && { time "${BINARY_STAGE_TWO}" \
+    "${OUTPUT_DIR}/$(basename ${identlog} log)conf"; } 2>&1 | \
+    tee ${identlog}.debug > /dev/null
+if [ $? -ne 0 ]; then
+	fail 'An error occurred during identification stage two. ' \
+	    "Please review: ${identlog}.debug"
+fi
+
+# Merge logs from multiple processes
+find "${OUTPUT_DIR}" -type f -name $(basename ${identlog} .log)-* -exec sed -n '2,$ p' {} \; | sort -k3 > ${identlog}
+header=$(head -n 1 "${OUTPUT_DIR}"/$(basename ${identlog} .log)-0.log | sed 's/Description: \(.*\)/\1/')
+#find "${OUTPUT_DIR}" -type f -name $(basename ${identlog} .log)-* -exec rm {} \;
+echo -e "$header\n$(cat ${identlog})" > "${identlog}"
+
+
+# Check format of each line of each identification stage two log file
+unsuccessful_rv_identtwo=0
+for f in $(find "${OUTPUT_DIR}" -type f -name $(basename ${identlog} .log)-*); do
+	# Strip "Description: " from each logfile
+	sed -i'' '1,1 s/Description: //' $f
+
+	OLDIFS=$IFS; IFS=$'\n';
+	for line in $(sed -n '2,$ p' $f); do
+		formatTest=$(echo $line | sed 's/E [0-9]\{10\} N2N_S[0-9]\{3\}_[CL]\(-[1-4]\)\{0,1\}.an2 \([0-9]\{1,\} \)\{3\}\[<\[.*\]>\] \[<\[.*\]>\]/test/')
+		if [ $? -ne 0 ] || [ "$formatTest" != "test" ]; then
+			fail "The identification stage two log is invalid. " \
+			    "Please review: ${identlog}" $line
+		fi
+
+		# Check for successful return values
+		rv=$(echo $line | awk '{print $6}')
+		if [ $rv -ne 0 ]; then
+			unsuccessful_rv_identtwo=1
+		fi
+
+		apistate=$(echo $line | awk '{print $5}')
+		if [ $apistate -ne 5 ]; then
+			fail "Identification stage two failed to return. " \
+			    "Please review: ${identlog}" $line
+		fi
+
+
+	done
+done
+
+IFS=$OLDIFS
+echo "[OKAY]"
+}
+
+stageTwoIdentificaiton "capture"
+if [ ${N2N_LATENT_SUPPORT} -eq 1 ]; then
+	stageTwoIdentificaiton "latent"
+fi
+
+
+# Warn about non-zero return values
+if [ $unsuccessful_rv_enrollment -ne 0 ]; then
+	echo "*** [NOTE] There were some non-zero return values while generating templates."
+fi
+if [ $unsuccessful_rv_identone -ne 0 ]; then
+	echo "*** [NOTE] There were some non-zero return values while performing identification stage one."
+fi
+if [ $unsuccessful_rv_identtwo -ne 0 ]; then
+	echo "*** [NOTE] There were some non-zero return values while performing identification stage two."
+fi
+
+
+#
+# Create the unencrypted submission
+#
+ln -s "${OUTPUT_DIR}" "${OUTPUT_DIR}_${COMPANY}_${LIB_REVISION}"
+TAR_FILE="${OUTPUT_DIR}_${COMPANY}_${LIB_REVISION}.tar.gz"
+echo -n "Creating validation submission (${TAR_FILE})... "
+
+# Copy libs
+cp -pr "${N2N_LIB_DIR}" "${OUTPUT_DIR}"
+if [ $? -ne 0 ]; then
+	fail "There was an issue copying libraries. Check permissions?"
+fi
+
+# Copy configs
+cp -pr "${N2N_CONFIG_DIR}" "${OUTPUT_DIR}"
+if [ $? -ne 0 ]; then
+	fail "There was an issue copying configurations. Check permissions?"
+fi
+
+# Create archive
+cd $(dirname "${OUTPUT_DIR}") && tar czfh ${TAR_FILE} $(basename "${OUTPUT_DIR}_${COMPANY}_${LIB_REVISION}") && rm "${OUTPUT_DIR}_${COMPANY}_${LIB_REVISION}" > /dev/null
+if [ $? -ne 0 ]; then
+	fail "There was an issue creating the validation submission. Try again?"
+fi
+echo "[OKAY]"
+
+echo "
+--------------------------------------------------------------------------------
+You have successfully completed the first step in N2N validation. Please
+sign and encrypt this file, send it to N2NChallenge@nist.gov, and await a
+notification.
+
+${TAR_FILE}
+
+Example encryption:
+gpg --output $(basename ${TAR_FILE}).asc \\
+    --default-key jdoe@${COMPANY}.com --recipient N2NChallenge@nist.gov \\
+    --recipient jdoe@${COMPANY}.com --armor --sign --encrypt \\
+    $(basename "${TAR_FILE}")
+
+Additionally, be sure to include the public key of the identity that signed the
+validation package. This key must be the key whose fingerprint was printed on
+the N2N application. If it is not, you will be required to submit a new
+application.
+
+Example public key extraction:
+gpg --output ${COMPANY}_public_key.asc --armor \\
+    --export jdoe@${COMPANY}.com
+
+Before you submit, you will likely want to check the output of identification
+stage two, to be sure that the candidates you returned make sense.
+
+${IDENT_STAGE_TWO_CAPTURE_LOG}"
+
+if [ ${N2N_LATENT_SUPPORT} -eq 1 ]; then
+	echo "${IDENT_STAGE_TWO_LATENT_LOG}"
+fi
+
+if [ $VALIDATION_VERSION_CHECKED -eq 0 ]; then
+	echo
+	echo "********************************************************************************
+IMPORTANT: This script was unable to check, so please ensure that you are
+using the latest version of the N2N validation package before submitting.
+You are currently running with version $VALIDATION_VERSION.
+
+Information: $VALIDATION_PROMO_URL
+Version: $VALIDATION_VERS_URL
+Download: $VALIDATION_DL_URL
+********************************************************************************
+"
+fi
+
+date
+
