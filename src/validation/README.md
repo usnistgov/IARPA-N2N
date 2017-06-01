@@ -45,7 +45,7 @@ Package Contents
        sign a usage agreement to obtain this directory from NIST, and then place
        it in the `validation` directory.
      * [`VERSION`](
-       (https://github.com/usnistgov/IARPA-N2N/blob/master/src/validation/VERSION):
+       https://github.com/usnistgov/IARPA-N2N/blob/master/src/validation/VERSION):
        Version number of the validation package.
 
 Requirements
