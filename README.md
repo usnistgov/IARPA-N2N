@@ -62,13 +62,13 @@ registered N2N participants.
 
 Important Dates
 ---------------
- * ~~15 May 2017: Comments regarding API are due (via [GitHub](
-                https://github.com/usnistgov/IARPA-N2N/issues) or [e-mail](
-                mailto:N2NChallenge@nist.gov)).~~
+ * ~~15 May 2017:  Comments regarding API are due (via [GitHub](
+                   https://github.com/usnistgov/IARPA-N2N/issues) or [e-mail](
+                   mailto:N2NChallenge@nist.gov)).~~
  * ~~01 June 2017: NIST will begin receiving validation submissions.~~
- * **01 July 2017**: Submission deadline. Due to the time required to create several
-                 million templates that cannot overlap with the data collection,
-                 this date **cannot** be extended.
+ * ~~01 July 2017: Submission deadline. Due to the time required to create
+                   several million templates that cannot overlap with the data
+                   collection, this date **cannot** be extended.~~
 
 Contact
 -------
