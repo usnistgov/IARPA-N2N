@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['statuscode',['StatusCode',['../namespace_n2_n.html#ad34cdec6e1f4c1fce5dd34a24272678f',1,'N2N']]]
+  ['patternclassification_0',['PatternClassification',['../namespace_biometric_evaluation_1_1_finger.html#aaf4e19bd4200eb7897ea68b80873c216',1,'BiometricEvaluation::Finger']]],
+  ['position_1',['Position',['../namespace_biometric_evaluation_1_1_finger.html#a0d5e9fd993eb0cbe4c650dcc7be72646',1,'BiometricEvaluation::Finger']]]
 ];
