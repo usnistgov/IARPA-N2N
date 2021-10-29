@@ -1,4 +1,4 @@
-<p align="center"><img src="http://nigos.nist.gov:8080/nist/n2n_logo_white.svg.gz" title="N2N Challenge" alt="N2N Challenge Logo" width=30%"></p>
+<p align="center"><img src="doc/assets/n2n_logo_white.svg" title="N2N Challenge" alt="N2N Challenge Logo" width=30%"></p>
 
 Nail to Nail Fingerprint Capture Challenge
 ==========================================
@@ -9,7 +9,7 @@ This repository contains the Application Program Interface (API) for
 participant-specific one-to-many template generation and identification
 algorithms for Intelligence Advanced Research Projects Activity (IARPA)'s
 [2017 Nail to Nail Fingerprint Capture Challenge](
-https://www.iarpa.gov/challenges/n2n/n2n.html).
+https://www.iarpa.gov/index.php/research-programs/nail-to-nail-n2n-fingerprint-challenge).
 This API is based off the API used for
 [Fingerprint Vendor Technology Evaluation (FpVTE) 2012](
 https://www.nist.gov/itl/iad/image-group/fpvte-2012),
@@ -39,8 +39,8 @@ implementation by calling `N2N::Interface::getImplementation()`, and perform
 various template generation and identification operations.
 
 Implementing this API requires the use of
-[`libbiomeval`](https://github.com/usnistgov/BiometricEvaluation) ([release 10](
-https://github.com/usnistgov/BiometricEvaluation/releases/tag/v10.0)).
+[`libbiomeval`](https://github.com/usnistgov/libbiomeval) ([release 10](
+https://github.com/usnistgov/libbiomeval/releases/tag/v10.0)).
 
 Submitting
 ----------
